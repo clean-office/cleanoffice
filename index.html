@@ -114,6 +114,8 @@ tr:hover td{background:var(--panel2)}
 
 <script>
 const SUPABASE_URL = "https://nivgbvkjuvujofadpcsx.supabase.co";
+const DEFAULT_ANON = "sb_publishable_0fg4AX0sTTh10IimI9VJfg_ybP6o7o9";   // 공개용(publishable) 키 — 내장 안전
+const DEFAULT_KAKAO = "f18dc3635f475cc0dd93c44345779064";                 // 카카오 JS 키(도메인 제한됨)
 const STATUSES = ["미접촉","전단지배포","관리실컨택","견적제출","계약","거절","보류"];
 let sb=null, BUILDINGS=[], UNITAGG={};
 const $=id=>document.getElementById(id);
@@ -121,8 +123,7 @@ const show=id=>{["setup","login","app"].forEach(x=>$(x).classList.toggle("hide",
 function toast(m){const t=$("toast");t.textContent=m;t.classList.add("show");setTimeout(()=>t.classList.remove("show"),1600)}
 
 function initClient(){
-  const key=localStorage.getItem("co_anon")||"sb_publishable_0fg4AX0sTTh10IimI9VJfg_ybP6o7o9";
-  if(!key){show("setup");return false}
+  const key=localStorage.getItem("co_anon")||DEFAULT_ANON;   // 신규 방문자도 키 입력 없이 바로 로그인 화면
   sb=supabase.createClient(SUPABASE_URL,key);
   return true;
 }
@@ -339,7 +340,7 @@ async function viewClients(){
    ${(data||[]).length?`<table><thead><tr><th>입주사</th><th>건물</th><th>권역</th><th>호수</th></tr></thead><tbody>${rows}</tbody></table>`:'<div class="box">아직 계약 호실이 없습니다.</div>'}`;
 }
 /* ===================== 지도 (카카오맵) ===================== */
-const KAKAO_KEY=()=>localStorage.getItem("co_kakao")||"";
+const KAKAO_KEY=()=>localStorage.getItem("co_kakao")||DEFAULT_KAKAO;
 let COORDS=JSON.parse(localStorage.getItem("co_coords")||"{}");  // building.id -> [lat,lng]
 let kmap=null, kInfo=null, kOverlays=[];
 
@@ -530,7 +531,9 @@ function viewRoute(){
      </div>
      <button class="btn" onclick="genRoute()">🧭 동선 생성</button>
    </div>
-   <div id="rresult"></div>`;
+   <div id="rresult"></div>
+   <div id="rassign"></div>`;
+  loadAssignments();
 }
 function setRMeta(t){ if($("rmeta"))$("rmeta").textContent=t; }
 async function genRoute(){
@@ -540,7 +543,7 @@ async function genRoute(){
   pool=pool.filter(b=>{const k=bstat(b).k; return tgt==="prog" ? k!=="계약" : k==="미접촉";});
   if(cap>0) pool=pool.filter(b=>(+b.units)<=cap);
   if(!pool.length){ toast("대상 건물이 없어요 (좌표·호실수·상태 확인)"); return; }
-  const S=pool.map(b=>{const ll=coordOf(b);return {n:b.name, la:ll[0], ln:ll[1], u:+b.units||0, s:bstat(b).k, id:b.id};});
+  const S=pool.map(b=>{const ll=coordOf(b);return {n:b.name, la:ll[0], ln:ll[1], u:+b.units||0, s:bstat(b).k, id:b.id, a:(b.address||"").split("(")[0].trim()};});
   const wHav=(i,j)=> rhav(S[i],S[j]) * (pri==="units"? 1/(1+S[j].u/2000):1);
   const order=rNN(S,wHav);
   let pick=[], usum=0;
@@ -575,20 +578,54 @@ function showRouteResult(){
      <div id="rsum" style="padding:11px 16px;background:var(--panel2);font-size:12.5px;color:var(--mut);border-bottom:1px solid var(--line)">총 ${RROUTE.length}곳 · 호실 합계 ${totU.toLocaleString()}</div>
      <div id="rlist"></div>
    </div>
-   <button class="btn" style="margin-top:10px" onclick="assignRoute()"><i class="ti ti-user-plus"></i> 이 동선을 알바에게 배정</button>
+   <div class="box" style="margin-top:12px"><h3>알바에게 배정</h3>
+     <div class="flex"><input id="aEmail" type="email" placeholder="알바 이메일 (가입 전이어도 OK)" style="flex:1;min-width:220px">
+     <button class="btn" onclick="assignRoute()">이 동선 배정</button></div>
+     <div class="sub" style="margin:8px 0 0">알바가 앱에서 이 이메일로 회원가입/로그인하면 <b>이 동선만</b> 보입니다. 진행 상황은 아래 '배정 현황'에서.</div></div>
    <button class="btn ghost sm" onclick="go('route')">← 다시 만들기</button>`;
   rmap=null; rov=[]; rline=null;   // 매번 새 #rmap에 새 지도 (재생성 시 stale map 방지)
 }
 window.assignRoute=async()=>{
   if(!RROUTE.length){ toast("먼저 동선을 생성하세요"); return; }
-  const email=prompt("배정할 알바 이메일을 입력하세요.\n알바가 이 이메일로 앱에 로그인하면 이 동선만 보입니다(영업 데이터는 안 보임).");
-  if(!email) return;
-  const stops=RROUTE.map(b=>({building_id:b.id,name:b.n,lat:b.la,lng:b.ln,units:b.u,status:b.s}));
+  const email=($("aEmail")?$("aEmail").value:"").trim().toLowerCase();
+  if(!email||!email.includes("@")){ toast("알바 이메일을 입력하세요"); return; }
+  const stops=RROUTE.map(b=>({building_id:b.id,name:b.n,lat:b.la,lng:b.ln,units:b.u,status:b.s,address:b.a||""}));
   const owner=(await sb.auth.getUser()).data.user.id;
   const z=$("rz")?$("rz").value:"";
-  const {error}=await sb.from("routes").insert({owner_id:owner,worker_email:email.trim().toLowerCase(),title:(z||"동선"),zone:z,mode:RMODE,stops,status:"active"});
-  toast(error?("배정 실패: "+error.message):("✅ 배정됨 → "+email.trim()));
+  const today=new Date(); const dstr=(today.getMonth()+1)+"/"+today.getDate();
+  const {error}=await sb.from("routes").insert({owner_id:owner,worker_email:email,title:`${z||"동선"} ${dstr} (${RROUTE.length}곳)`,zone:z,mode:RMODE,stops,status:"active"});
+  if(error){ toast("배정 실패: "+error.message); return; }
+  toast("✅ 배정됨 → "+email); if($("aEmail"))$("aEmail").value="";
+  loadAssignments();
 };
+async function loadAssignments(){
+  const box=$("rassign"); if(!box) return;
+  const {data:rs,error}=await sb.from("routes").select("id,title,zone,mode,worker_email,status,created_at,stops").order("created_at",{ascending:false}).limit(15);
+  if(error){ box.innerHTML='<div class="box">배정 현황 오류: '+error.message+'</div>'; return; }
+  if(!rs||!rs.length){ box.innerHTML='<div class="box" style="color:var(--mut)">아직 배정한 동선이 없습니다. 동선 생성 → 알바 이메일로 배정하면 여기에 진행 상황이 쌓입니다.</div>'; return; }
+  const {data:vs}=await sb.from("visits").select("route_id,building_id,created_at");
+  const vmap={}, tmap={};
+  (vs||[]).forEach(v=>{ (vmap[v.route_id]=vmap[v.route_id]||new Set()).add(v.building_id);
+    const t=tmap[v.route_id]; if(!t||v.created_at>t) tmap[v.route_id]=v.created_at; });
+  box.innerHTML=`<h3 style="font-size:15px;margin:22px 0 10px;color:var(--blue2)">배정 현황 (${rs.length})</h3>`+rs.map(r=>{
+    const total=(r.stops||[]).length, done=(vmap[r.id]||new Set()).size;
+    const pct=total?Math.round(done/total*100):0;
+    const last=tmap[r.id]? new Date(tmap[r.id]).toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):"기록 없음";
+    const cdone=pct>=100;
+    return `<div class="box" style="padding:13px 16px">
+      <div class="flex" style="justify-content:space-between">
+        <div><b style="font-size:14px">${r.title||r.zone||'동선'}</b>
+          <span class="badge" style="margin-left:6px">${r.mode||''}</span>
+          <div class="sub" style="margin:3px 0 0">👤 ${r.worker_email||'미지정'} · 마지막 체크 ${last}</div></div>
+        <div style="text-align:right;flex-shrink:0">
+          <b style="font-size:17px;color:${cdone?'var(--green)':'var(--blue2)'}">${done}/${total}</b>
+          <span class="del" style="margin-left:10px;font-size:13px" onclick="delRoute('${r.id}')">삭제</span></div>
+      </div>
+      <div style="height:8px;background:var(--panel2);border-radius:6px;overflow:hidden;margin-top:9px"><i style="display:block;height:100%;width:${pct}%;background:${cdone?'var(--green)':'var(--blue)'}"></i></div>
+    </div>`;}).join("");
+}
+window.delRoute=async(id)=>{ if(!confirm("이 동선 배정을 삭제할까요? (알바 화면에서도 사라집니다)"))return;
+  await sb.from("routes").delete().eq("id",id); toast("삭제됨"); loadAssignments(); };
 function rFirstUndone(){ for(let i=0;i<RROUTE.length;i++) if(!RDONE.has(i)) return i; return -1; }
 function renderRouteList(){
   const cur=rFirstUndone();
@@ -674,69 +711,112 @@ async function applyRouteMap(){
 }
 
 /* ===================== 알바 전용 화면 (일=동선만) ===================== */
-let WROUTES=[], WCUR=null, WDONE=new Set(), wmap=null, wov=[];
+let WROUTES=[], WCUR=null, WDONE=new Set(), WTIME={}, wmap=null, wov=[], wline=null;
 async function showWorkerApp(){
   document.querySelector(".side").style.display="none";   // 영업 메뉴 숨김
-  if(!localStorage.getItem("co_kakao")) localStorage.setItem("co_kakao","f18dc3635f475cc0dd93c44345779064"); // 지도 기본키(도메인 등록됨)
   const V=$("view"); V.innerHTML='<div class="loading">내 동선 불러오는 중…</div>';
   const {data,error}=await sb.from("routes").select("*").eq("status","active").order("created_at",{ascending:false});
   if(error){ V.innerHTML='<h1>내 동선</h1><div class="box">불러오기 오류: '+error.message+'</div>'; return; }
   WROUTES=data||[];
-  V.innerHTML=`<h1>내 동선</h1><div class="sub">${MYEMAIL} · 배정된 동선 ${WROUTES.length}개 · <span class="link" onclick="doLogout()">로그아웃</span></div>`+
-    (WROUTES.length? WROUTES.map((r,i)=>`<div class="box" style="cursor:pointer" onclick="openWRoute(${i})">
-        <div style="font-weight:700;font-size:15px">${r.title||r.zone||'동선'} · ${(r.stops||[]).length}곳</div>
-        <div class="sub" style="margin:4px 0 0">${r.zone||''} · ${r.mode||''} · ${new Date(r.created_at).toLocaleDateString()}</div>
-      </div>`).join("") : '<div class="box">아직 배정된 동선이 없습니다. 사장님이 동선을 배정하면 여기 표시됩니다.</div>');
+  let prog={};
+  if(WROUTES.length){ const {data:vs}=await sb.from("visits").select("route_id,building_id");
+    (vs||[]).forEach(v=>{(prog[v.route_id]=prog[v.route_id]||new Set()).add(v.building_id)}); }
+  V.innerHTML=`<div class="flex" style="justify-content:space-between;align-items:center">
+    <h1 style="font-size:23px">내 동선</h1>
+    <button class="btn ghost sm" onclick="showWorkerApp()">↻ 새로고침</button></div>
+   <div class="sub">${MYEMAIL} · <span class="link" onclick="doLogout()">로그아웃</span></div>`+
+   (WROUTES.length? WROUTES.map((r,i)=>{const total=(r.stops||[]).length,done=(prog[r.id]||new Set()).size;const pct=total?Math.round(done/total*100):0;
+     return `<div class="box" style="cursor:pointer;padding:16px 18px" onclick="openWRoute(${i})">
+       <div class="flex" style="justify-content:space-between"><b style="font-size:16px">${r.title||r.zone||'동선'}</b>
+       <b style="font-size:16px;color:${pct>=100?'var(--green)':'var(--blue2)'}">${done}/${total}</b></div>
+       <div style="height:8px;background:var(--panel2);border-radius:6px;overflow:hidden;margin-top:10px"><i style="display:block;height:100%;width:${pct}%;background:${pct>=100?'var(--green)':'var(--blue)'}"></i></div>
+       <div class="sub" style="margin:8px 0 0">${r.zone||''} · ${r.mode||''} · ${new Date(r.created_at).toLocaleDateString()}</div></div>`;}).join("")
+    : '<div class="box" style="font-size:15px;line-height:1.7">아직 배정된 동선이 없습니다.<br>사장님이 동선을 배정하면 여기 표시됩니다.<br><span style="color:var(--mut);font-size:13px">※ 가입한 이메일이 배정받은 이메일과 같아야 해요.</span></div>');
 }
 window.openWRoute=async(i)=>{
-  WCUR=WROUTES[i]; const stops=WCUR.stops||[]; WDONE=new Set();
-  const {data:vs}=await sb.from("visits").select("building_id").eq("route_id",WCUR.id);
-  (vs||[]).forEach(v=>{const idx=stops.findIndex(s=>String(s.building_id)===String(v.building_id)); if(idx>=0)WDONE.add(idx);});
+  WCUR=WROUTES[i]; const stops=WCUR.stops||[]; WDONE=new Set(); WTIME={};
+  const {data:vs}=await sb.from("visits").select("building_id,created_at").eq("route_id",WCUR.id);
+  (vs||[]).forEach(v=>{const idx=stops.findIndex(s=>String(s.building_id)===String(v.building_id));
+    if(idx>=0){WDONE.add(idx); WTIME[idx]=v.created_at;}});
   renderWRoute();
 };
+function wNext(){ const st=WCUR.stops||[]; for(let i=0;i<st.length;i++) if(!WDONE.has(i)) return i; return -1; }
 function renderWRoute(){
   const stops=WCUR.stops||[];
-  $("view").innerHTML=`<div class="flex" style="justify-content:space-between"><h1>${WCUR.title||WCUR.zone||'동선'}</h1><button class="btn ghost sm" onclick="showWorkerApp()">← 목록</button></div>
-   <div class="sub">${stops.length}곳 · ${WCUR.mode||''} · 방문 <b id="wprog">${WDONE.size}/${stops.length}</b></div>
-   <div id="wmap" style="width:100%;height:300px;border:1px solid var(--line);border-radius:12px;margin-bottom:12px"></div>
+  $("view").innerHTML=`<div class="flex" style="justify-content:space-between;align-items:center">
+    <h1 style="font-size:21px">${WCUR.title||WCUR.zone||'동선'}</h1>
+    <button class="btn ghost sm" onclick="showWorkerApp()">← 목록</button></div>
+   <div style="margin:10px 0 6px"><div class="flex" style="justify-content:space-between;font-size:14px">
+     <span style="color:var(--mut)">진행</span><b id="wprog" style="font-size:16px">${WDONE.size}/${stops.length}</b></div>
+   <div style="height:10px;background:var(--panel2);border-radius:6px;overflow:hidden;margin-top:6px"><i id="wbar" style="display:block;height:100%;width:${stops.length?Math.round(WDONE.size/stops.length*100):0}%;background:var(--green);transition:width .3s"></i></div></div>
+   <div id="wmap" style="width:100%;height:260px;border:1px solid var(--line);border-radius:12px;margin:10px 0 14px"></div>
    <div id="wlist"></div>`;
-  wmap=null; wov=[];
+  wmap=null; wov=[]; wline=null;
   renderWList(); drawWMap();
 }
+function wCard(s,i,hero){
+  const dn=WDONE.has(i);
+  const time=dn&&WTIME[i]? new Date(WTIME[i]).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}):"";
+  if(dn) return `<div class="box" style="padding:12px 16px;opacity:.6;display:flex;gap:12px;align-items:center">
+     <div style="width:30px;height:30px;border-radius:50%;background:var(--green);color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">✓</div>
+     <div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:600;text-decoration:line-through;color:var(--mut)">${s.name}</div>
+     <div class="sub" style="margin:1px 0 0">완료 ${time}</div></div></div>`;
+  return `<div class="box" style="padding:${hero?'18px 18px 16px':'14px 16px'};${hero?'border:2px solid var(--blue);box-shadow:0 4px 14px rgba(217,119,6,.18)':''}">
+     ${hero?'<div style="font-size:12px;font-weight:800;color:var(--blue2);letter-spacing:.06em;margin-bottom:8px">👉 다음 차례</div>':''}
+     <div style="display:flex;gap:13px;align-items:flex-start">
+       <div style="width:${hero?'38px':'30px'};height:${hero?'38px':'30px'};border-radius:50%;background:#c2410c;color:#fff;font-weight:800;font-size:${hero?'17px':'14px'};display:flex;align-items:center;justify-content:center;flex-shrink:0">${i+1}</div>
+       <div style="flex:1;min-width:0">
+         <div style="font-size:${hero?'18px':'15.5px'};font-weight:700;line-height:1.35">${s.name}</div>
+         ${s.address?`<div style="font-size:${hero?'14px':'13px'};color:var(--mut);margin-top:3px">${s.address}</div>`:''}
+         <div style="font-size:13px;color:var(--mut);margin-top:2px">${(+s.units||0).toLocaleString()}호실</div>
+         <div class="flex" style="gap:8px;margin-top:${hero?'14px':'10px'};flex-wrap:nowrap">
+           <a href="https://map.kakao.com/link/to/${encodeURIComponent(s.name)},${s.lat},${s.lng}" target="_blank" rel="noopener"
+              style="flex:1;text-align:center;text-decoration:none;background:var(--panel2);border:1.5px solid var(--line);color:var(--txt);font-size:15px;font-weight:700;padding:${hero?'14px':'11px'} 0;border-radius:10px">🧭 길찾기</a>
+           <span onclick="wVisit(${i})"
+              style="flex:1.3;text-align:center;cursor:pointer;background:var(--blue);color:#fff;font-size:15px;font-weight:800;padding:${hero?'14px':'11px'} 0;border-radius:10px">✓ 방문완료</span>
+         </div>
+       </div></div></div>`;
+}
 function renderWList(){
-  const stops=WCUR.stops||[];
-  $("wlist").innerHTML=stops.map((s,i)=>{const dn=WDONE.has(i);
-   return `<div class="box" style="display:flex;gap:11px;align-items:flex-start;${dn?'opacity:.55':''}">
-     <div style="flex-shrink:0;width:26px;height:26px;border-radius:50%;background:${dn?'#15803d':'#c2410c'};color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center">${dn?'✓':(i+1)}</div>
-     <div style="flex:1;min-width:0">
-       <div style="font-weight:600;${dn?'text-decoration:line-through;color:var(--mut)':''}">${s.name}</div>
-       <div class="sub" style="margin:2px 0 7px">${(+s.units||0).toLocaleString()}호</div>
-       <div class="flex" style="gap:6px">
-         <a class="btn sm" style="text-decoration:none" href="https://map.kakao.com/link/to/${encodeURIComponent(s.name)},${s.lat},${s.lng}" target="_blank" rel="noopener">길찾기</a>
-         <span class="btn sm ghost" onclick="wVisit(${i})">${dn?'완료됨':'방문완료'}</span>
-       </div>
-     </div></div>`;}).join("");
+  const stops=WCUR.stops||[]; const nx=wNext();
+  const undone=[], done=[];
+  stops.forEach((s,i)=>{ (WDONE.has(i)?done:undone).push(i); });
+  let h="";
+  if(nx>=0) h+=wCard(stops[nx],nx,true);
+  undone.filter(i=>i!==nx).forEach(i=>h+=wCard(stops[i],i,false));
+  if(done.length) h+=`<div class="sub" style="margin:14px 0 8px">완료 (${done.length})</div>`+done.map(i=>wCard(stops[i],i,false)).join("");
+  if(nx<0) h=`<div class="box" style="text-align:center;padding:26px;font-size:17px;font-weight:800;color:var(--green)">🎉 오늘 동선 완료!<div class="sub" style="margin-top:6px;font-weight:400">수고하셨습니다. 사장님께 자동으로 집계됩니다.</div></div>`+h;
+  $("wlist").innerHTML=h;
 }
 window.wVisit=async(i)=>{
   if(WDONE.has(i)) return;
   const s=(WCUR.stops||[])[i];
   const {error}=await sb.from("visits").insert({route_id:WCUR.id, owner_id:WCUR.owner_id, building_id:String(s.building_id||""), name:s.name, done:true});
   if(error){ toast("저장 실패: "+error.message); return; }
-  WDONE.add(i); toast("방문 기록됨"); renderWList();
-  if($("wprog"))$("wprog").textContent=WDONE.size+"/"+(WCUR.stops||[]).length;
+  WDONE.add(i); WTIME[i]=new Date().toISOString(); toast("✓ 방문 기록됨");
+  const stops=WCUR.stops||[];
+  if($("wprog"))$("wprog").textContent=WDONE.size+"/"+stops.length;
+  if($("wbar"))$("wbar").style.width=(stops.length?Math.round(WDONE.size/stops.length*100):0)+"%";
+  renderWList(); drawWMap();
 };
 function drawWMap(){
   loadKakao().then(()=>{
     const stops=WCUR.stops||[]; if(!stops.length)return;
-    wmap=new kakao.maps.Map($("wmap"),{center:new kakao.maps.LatLng(stops[0].lat,stops[0].lng),level:5});
+    if(!wmap) wmap=new kakao.maps.Map($("wmap"),{center:new kakao.maps.LatLng(stops[0].lat,stops[0].lng),level:5});
     wov.forEach(o=>o.setMap(null)); wov=[];
+    if(wline)wline.setMap(null);
+    wline=new kakao.maps.Polyline({path:stops.map(s=>new kakao.maps.LatLng(s.lat,s.lng)),strokeWeight:3,strokeColor:"#b9a58c",strokeOpacity:.7,strokeStyle:"shortdash"});
+    wline.setMap(wmap);
+    const nx=wNext();
     const bounds=new kakao.maps.LatLngBounds();
     stops.forEach((s,i)=>{const pos=new kakao.maps.LatLng(s.lat,s.lng); bounds.extend(pos);
+      const dn=WDONE.has(i);
       const el=document.createElement("div");
-      el.style.cssText="width:25px;height:25px;border-radius:50%;background:#c2410c;color:#fff;font:700 12px sans-serif;display:flex;align-items:center;justify-content:center;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.4)";
-      el.textContent=(i+1);
-      const ov=new kakao.maps.CustomOverlay({position:pos,content:el,xAnchor:.5,yAnchor:.5}); ov.setMap(wmap); wov.push(ov);});
-    if(stops.length)wmap.setBounds(bounds);
+      const sz=i===nx?32:26;
+      el.style.cssText=`width:${sz}px;height:${sz}px;border-radius:50%;background:${dn?'#15803d':'#c2410c'};color:#fff;font:800 ${i===nx?15:12}px sans-serif;display:flex;align-items:center;justify-content:center;border:${i===nx?'3px':'2px'} solid #fff;box-shadow:0 1px 5px rgba(0,0,0,.45)`;
+      el.textContent=dn?'✓':(i+1);
+      const ov=new kakao.maps.CustomOverlay({position:pos,content:el,xAnchor:.5,yAnchor:.5,zIndex:i===nx?10:1}); ov.setMap(wmap); wov.push(ov);});
+    wmap.setBounds(bounds);
   }).catch(()=>{ if($("wmap"))$("wmap").innerHTML='<div class="loading">지도를 못 불러왔어요 — 각 항목의 길찾기 버튼을 쓰세요</div>'; });
 }
 
