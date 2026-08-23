@@ -3,6 +3,8 @@
 <title>클린 오피스 — 영업 관리</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#d97706">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#f4eee3;--panel:#fffaf2;--panel2:#f7efe0;--line:#ecdfc9;--navy:#f7efe0;--blue:#d97706;--blue2:#b45309;--txt:#3a322a;--mut:#8a7d6a;--green:#15803d;--yellow:#b45309;--red:#dc2626}
@@ -603,9 +605,10 @@ async function loadAssignments(){
   const {data:rs,error}=await sb.from("routes").select("id,title,zone,mode,worker_email,status,created_at,stops").order("created_at",{ascending:false}).limit(15);
   if(error){ box.innerHTML='<div class="box">배정 현황 오류: '+error.message+'</div>'; return; }
   if(!rs||!rs.length){ box.innerHTML='<div class="box" style="color:var(--mut)">아직 배정한 동선이 없습니다. 동선 생성 → 알바 이메일로 배정하면 여기에 진행 상황이 쌓입니다.</div>'; return; }
-  const {data:vs}=await sb.from("visits").select("route_id,building_id,created_at");
-  const vmap={}, tmap={};
+  const {data:vs}=await sb.from("visits").select("*");
+  const vmap={}, tmap={}, vok={};
   (vs||[]).forEach(v=>{ (vmap[v.route_id]=vmap[v.route_id]||new Set()).add(v.building_id);
+    if(v.dist_m!=null&&v.dist_m<=200) vok[v.route_id]=(vok[v.route_id]||0)+1;
     const t=tmap[v.route_id]; if(!t||v.created_at>t) tmap[v.route_id]=v.created_at; });
   box.innerHTML=`<h3 style="font-size:15px;margin:22px 0 10px;color:var(--blue2)">배정 현황 (${rs.length})</h3>`+rs.map(r=>{
     const total=(r.stops||[]).length, done=(vmap[r.id]||new Set()).size;
@@ -616,7 +619,7 @@ async function loadAssignments(){
       <div class="flex" style="justify-content:space-between">
         <div><b style="font-size:14px">${r.title||r.zone||'동선'}</b>
           <span class="badge" style="margin-left:6px">${r.mode||''}</span>
-          <div class="sub" style="margin:3px 0 0">👤 ${r.worker_email||'미지정'} · 마지막 체크 ${last}</div></div>
+          <div class="sub" style="margin:3px 0 0">👤 ${r.worker_email||'미지정'} · 마지막 체크 ${last}${(vok[r.id]||0)>0?` · <span style="color:var(--green)">현장확인 ${vok[r.id]}</span>`:''}</div></div>
         <div style="text-align:right;flex-shrink:0">
           <b style="font-size:17px;color:${cdone?'var(--green)':'var(--blue2)'}">${done}/${total}</b>
           <span class="del" style="margin-left:10px;font-size:13px" onclick="delRoute('${r.id}')">삭제</span></div>
@@ -711,13 +714,14 @@ async function applyRouteMap(){
 }
 
 /* ===================== 알바 전용 화면 (일=동선만) ===================== */
-let WROUTES=[], WCUR=null, WDONE=new Set(), WTIME={}, wmap=null, wov=[], wline=null;
+let WROUTES=[], WCUR=null, WDONE=new Set(), WTIME={}, WLOC={}, wmap=null, wov=[], wline=null;
 async function showWorkerApp(){
   document.querySelector(".side").style.display="none";   // 영업 메뉴 숨김
   const V=$("view"); V.innerHTML='<div class="loading">내 동선 불러오는 중…</div>';
   const {data,error}=await sb.from("routes").select("*").eq("status","active").order("created_at",{ascending:false});
   if(error){ V.innerHTML='<h1>내 동선</h1><div class="box">불러오기 오류: '+error.message+'</div>'; return; }
   WROUTES=data||[];
+  vqFlush();
   let prog={};
   if(WROUTES.length){ const {data:vs}=await sb.from("visits").select("route_id,building_id");
     (vs||[]).forEach(v=>{(prog[v.route_id]=prog[v.route_id]||new Set()).add(v.building_id)}); }
@@ -734,10 +738,10 @@ async function showWorkerApp(){
     : '<div class="box" style="font-size:15px;line-height:1.7">아직 배정된 동선이 없습니다.<br>사장님이 동선을 배정하면 여기 표시됩니다.<br><span style="color:var(--mut);font-size:13px">※ 가입한 이메일이 배정받은 이메일과 같아야 해요.</span></div>');
 }
 window.openWRoute=async(i)=>{
-  WCUR=WROUTES[i]; const stops=WCUR.stops||[]; WDONE=new Set(); WTIME={};
-  const {data:vs}=await sb.from("visits").select("building_id,created_at").eq("route_id",WCUR.id);
+  WCUR=WROUTES[i]; const stops=WCUR.stops||[]; WDONE=new Set(); WTIME={}; WLOC={};
+  const {data:vs}=await sb.from("visits").select("*").eq("route_id",WCUR.id);
   (vs||[]).forEach(v=>{const idx=stops.findIndex(s=>String(s.building_id)===String(v.building_id));
-    if(idx>=0){WDONE.add(idx); WTIME[idx]=v.created_at;}});
+    if(idx>=0){WDONE.add(idx); WTIME[idx]=v.created_at; if(v.dist_m!=null)WLOC[idx]={d:v.dist_m};}});
   renderWRoute();
 };
 function wNext(){ const st=WCUR.stops||[]; for(let i=0;i<st.length;i++) if(!WDONE.has(i)) return i; return -1; }
@@ -760,7 +764,7 @@ function wCard(s,i,hero){
   if(dn) return `<div class="box" style="padding:12px 16px;opacity:.6;display:flex;gap:12px;align-items:center">
      <div style="width:30px;height:30px;border-radius:50%;background:var(--green);color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">✓</div>
      <div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:600;text-decoration:line-through;color:var(--mut)">${s.name}</div>
-     <div class="sub" style="margin:1px 0 0">완료 ${time}</div></div></div>`;
+     <div class="sub" style="margin:1px 0 0">완료 ${time}${(WLOC[i]&&WLOC[i].d!=null)?(WLOC[i].d<=200?` · <span style="color:var(--green);font-weight:700">현장 ${WLOC[i].d}m ✓</span>`:` · <span style="color:#b45309;font-weight:700">위치 ${WLOC[i].d}m 밖</span>`):" · 위치 미확인"}</div></div></div>`;
   return `<div class="box" style="padding:${hero?'18px 18px 16px':'14px 16px'};${hero?'border:2px solid var(--blue);box-shadow:0 4px 14px rgba(217,119,6,.18)':''}">
      ${hero?'<div style="font-size:12px;font-weight:800;color:var(--blue2);letter-spacing:.06em;margin-bottom:8px">👉 다음 차례</div>':''}
      <div style="display:flex;gap:13px;align-items:flex-start">
@@ -791,9 +795,18 @@ function renderWList(){
 window.wVisit=async(i)=>{
   if(WDONE.has(i)) return;
   const s=(WCUR.stops||[])[i];
-  const {error}=await sb.from("visits").insert({route_id:WCUR.id, owner_id:WCUR.owner_id, building_id:String(s.building_id||""), name:s.name, done:true});
-  if(error){ toast("저장 실패: "+error.message); return; }
-  WDONE.add(i); WTIME[i]=new Date().toISOString(); toast("✓ 방문 기록됨");
+  toast("위치 확인 중…");
+  const loc=await getLoc(8000);
+  const row={route_id:WCUR.id, owner_id:WCUR.owner_id, building_id:String(s.building_id||""), name:s.name, done:true};
+  if(loc && s.lat && s.lng){ row.lat=loc.lat; row.lng=loc.lng; row.acc_m=loc.acc; row.dist_m=Math.round(wHavM(loc.lat,loc.lng,+s.lat,+s.lng)); }
+  let {error}=await sb.from("visits").insert(row);
+  if(error && /column|schema/i.test(error.message||"")){
+    ({error}=await sb.from("visits").insert({route_id:row.route_id,owner_id:row.owner_id,building_id:row.building_id,name:row.name,done:true}));
+  }
+  if(error){ const q=vqAll(); q.push({r:row,n:0}); vqSave(q); toast("오프라인 — 저장해뒀다 자동 전송돼요"); }
+  else if(row.dist_m!=null){ toast(row.dist_m<=200? "✓ 기록됨 · 현장 확인 "+row.dist_m+"m" : "✓ 기록됨 · 위치 "+row.dist_m+"m 떨어짐"); }
+  else toast("✓ 기록됨 · 위치 미확인");
+  WDONE.add(i); WTIME[i]=new Date().toISOString(); WLOC[i]=(row.dist_m!=null)?{d:row.dist_m}:null;
   const stops=WCUR.stops||[];
   if($("wprog"))$("wprog").textContent=WDONE.size+"/"+stops.length;
   if($("wbar"))$("wbar").style.width=(stops.length?Math.round(WDONE.size/stops.length*100):0)+"%";
@@ -819,6 +832,35 @@ function drawWMap(){
     wmap.setBounds(bounds);
   }).catch(()=>{ if($("wmap"))$("wmap").innerHTML='<div class="loading">지도를 못 불러왔어요 — 각 항목의 길찾기 버튼을 쓰세요</div>'; });
 }
+
+/* ===== 위치·오프라인 큐 · PWA ===== */
+function wHavM(a,b,c,d){const R=6371000,x=(c-a)*Math.PI/180,y=(d-b)*Math.PI/180,
+  h=Math.sin(x/2)**2+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(y/2)**2;
+  return 2*R*Math.asin(Math.sqrt(h));}
+function getLoc(ms){ return new Promise(res=>{ if(!navigator.geolocation) return res(null);
+  let done=false; const fin=v=>{ if(!done){done=true;res(v);} };
+  setTimeout(()=>fin(null),ms||8000);
+  navigator.geolocation.getCurrentPosition(
+    p=>fin({lat:p.coords.latitude,lng:p.coords.longitude,acc:Math.round(p.coords.accuracy)}),
+    ()=>fin(null),{enableHighAccuracy:true,timeout:ms||8000,maximumAge:30000}); }); }
+function vqAll(){ try{return JSON.parse(localStorage.getItem("co_vq")||"[]")}catch(e){return []} }
+function vqSave(a){ localStorage.setItem("co_vq",JSON.stringify(a)) }
+async function vqFlush(){
+  let q=vqAll(); if(!q.length||!sb) return;
+  const rest=[]; let sent=0;
+  for(const it of q){ const row=it.r||it;
+    let {error}=await sb.from("visits").insert(row);
+    if(error && /column|schema/i.test(error.message||"")){
+      ({error}=await sb.from("visits").insert({route_id:row.route_id,owner_id:row.owner_id,building_id:row.building_id,name:row.name,done:true}));
+    }
+    if(error){ const n=(it.n||0)+1; if(n<8) rest.push({r:row,n}); }
+    else sent++;
+  }
+  vqSave(rest);
+  if(sent) toast("오프라인 방문 "+sent+"건 전송 완료");
+}
+window.addEventListener("online",()=>{ try{vqFlush()}catch(e){} });
+if("serviceWorker" in navigator){ try{ navigator.serviceWorker.register("sw.js"); }catch(e){} }
 
 boot();
 </script></body></html>
