@@ -798,23 +798,33 @@ function renderWList(){
 window.wVisit=async(i)=>{
   if(WDONE.has(i)) return;
   const s=(WCUR.stops||[])[i];
-  toast("위치 확인 중…");
-  const loc=await getLoc(8000);
   const row={route_id:WCUR.id, owner_id:WCUR.owner_id, building_id:String(s.building_id||""), name:s.name, done:true};
-  if(loc && s.lat && s.lng){ row.lat=loc.lat; row.lng=loc.lng; row.acc_m=loc.acc; row.dist_m=Math.round(wHavM(loc.lat,loc.lng,+s.lat,+s.lng)); }
-  let {data:ins,error}=await sb.from("visits").insert(row).select();
-  if(error && /column|schema/i.test(error.message||"")){
-    ({data:ins,error}=await sb.from("visits").insert({route_id:row.route_id,owner_id:row.owner_id,building_id:row.building_id,name:row.name,done:true}).select());
-  }
-  if(!error && ins && ins[0]) WVID[i]=ins[0].id;
-  if(error){ const q=vqAll(); q.push({r:row,n:0}); vqSave(q); toast("오프라인 — 저장해뒀다 자동 전송돼요"); }
-  else if(row.dist_m!=null){ toast(row.dist_m<=200? "✓ 기록됨 · 현장 확인 "+row.dist_m+"m" : "✓ 기록됨 · 위치 "+row.dist_m+"m 떨어짐"); }
-  else toast("✓ 기록됨 · 위치 미확인");
-  WDONE.add(i); WTIME[i]=new Date().toISOString(); WLOC[i]=(row.dist_m!=null)?{d:row.dist_m}:null;
+  // 1) 즉시 기록 (GPS를 기다리지 않음 — 현장에서 바로 다음 건물로)
+  WDONE.add(i); WTIME[i]=new Date().toISOString(); WLOC[i]=null;
   const stops=WCUR.stops||[];
   if($("wprog"))$("wprog").textContent=WDONE.size+"/"+stops.length;
   if($("wbar"))$("wbar").style.width=(stops.length?Math.round(WDONE.size/stops.length*100):0)+"%";
   renderWList(); drawWMap();
+  let {data:ins,error}=await sb.from("visits").insert(row).select();
+  if(error && /column|schema/i.test(error.message||"")){
+    ({data:ins,error}=await sb.from("visits").insert({route_id:row.route_id,owner_id:row.owner_id,building_id:row.building_id,name:row.name,done:true}).select());
+  }
+  if(error){
+    // 오프라인: 위치까지 잡아서 큐에 보관
+    const loc=await getLoc(6000);
+    if(loc && s.lat && s.lng){ row.lat=loc.lat; row.lng=loc.lng; row.acc_m=loc.acc; row.dist_m=Math.round(wHavM(loc.lat,loc.lng,+s.lat,+s.lng)); }
+    const q=vqAll(); q.push({r:row,n:0}); vqSave(q); toast("오프라인 — 저장해뒀다 자동 전송돼요");
+    return;
+  }
+  if(ins && ins[0]) WVID[i]=ins[0].id;
+  toast("✓ 방문 기록됨");
+  // 2) 위치는 백그라운드로 붙임
+  getLoc(8000).then(async loc=>{
+    if(!loc || !s.lat || !s.lng || !WVID[i]) return;
+    const dist=Math.round(wHavM(loc.lat,loc.lng,+s.lat,+s.lng));
+    const r2=await sb.from("visits").update({lat:loc.lat,lng:loc.lng,acc_m:loc.acc,dist_m:dist}).eq("id",WVID[i]);
+    if(!r2.error){ WLOC[i]={d:dist}; renderWList(); toast(dist<=200? "현장 확인 "+dist+"m ✓" : "위치 "+dist+"m 떨어짐"); }
+  }).catch(()=>{});
 };
 function drawWMap(){
   loadKakao().then(()=>{
@@ -849,7 +859,10 @@ function getLoc(ms){ return new Promise(res=>{ if(!navigator.geolocation) return
     ()=>fin(null),{enableHighAccuracy:true,timeout:ms||8000,maximumAge:30000}); }); }
 function vqAll(){ try{return JSON.parse(localStorage.getItem("co_vq")||"[]")}catch(e){return []} }
 function vqSave(a){ localStorage.setItem("co_vq",JSON.stringify(a)) }
+let VQBUSY=false;
 async function vqFlush(){
+  if(VQBUSY) return; VQBUSY=true;
+  try{
   let q=vqAll(); if(!q.length||!sb) return;
   const rest=[]; let sent=0;
   for(const it of q){ const row=it.r||it;
@@ -862,6 +875,7 @@ async function vqFlush(){
   }
   vqSave(rest);
   if(sent) toast("오프라인 방문 "+sent+"건 전송 완료");
+  } finally { VQBUSY=false; }
 }
 const VP_PUB="https://nivgbvkjuvujofadpcsx.supabase.co/storage/v1/object/public/visitpics/";
 function shrinkImg(file,max,q){ return new Promise(res=>{
