@@ -75,19 +75,19 @@ textarea{min-height:72px;resize:vertical}
       <input type="text" name="website" tabindex="-1" autocomplete="off">
     </div>
 
-    <label>업체명 / 담당자명 <span class="req">*</span></label>
-    <input name="company" maxlength="60" autocomplete="organization" placeholder="예) (주)클린상사 / 김성원" required>
+    <label>업체명 · 담당자 <span class="req">*</span></label>
+    <input name="company" maxlength="60" autocomplete="organization" placeholder="회사명 또는 담당자 성함" required>
 
     <label>연락처 <span class="req">*</span></label>
     <input name="phone" type="tel" inputmode="tel" maxlength="20" autocomplete="tel" placeholder="010-0000-0000" required>
 
-    <label>주소 (지식산업센터·호실) <span style="color:var(--sub);font-weight:400">— 선택</span></label>
-    <input name="address" maxlength="120" placeholder="예) 가산동 ○○지산 1503호">
+    <label>주소 <span style="color:var(--sub);font-weight:400">선택</span></label>
+    <input name="address" maxlength="120" placeholder="건물명과 호수">
 
     <div class="row">
       <div>
         <label>면적 (평)</label>
-        <input name="area" type="number" inputmode="numeric" min="0" max="100000" placeholder="예) 25">
+        <input name="area" type="number" inputmode="numeric" min="0" max="100000" placeholder="숫자만">
       </div>
       <div>
         <label>청소 주기</label>
@@ -110,7 +110,7 @@ textarea{min-height:72px;resize:vertical}
     </div>
 
     <label>요청사항</label>
-    <textarea name="message" maxlength="500" placeholder="예) 탕비실 위생 신경 써주세요 / 주말 작업 가능 문의"></textarea>
+    <textarea name="message" maxlength="500" placeholder="특별히 신경 쓸 곳이나 원하는 시간대가 있다면 적어주세요"></textarea>
 
     <button class="submit" type="submit" id="btn">견적 문의하기</button>
     <div class="err" id="err"></div>
