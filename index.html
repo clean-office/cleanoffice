@@ -3,68 +3,104 @@
 <title>클린 오피스 — 영업 관리</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3/dist/tabler-icons.min.css">
+<link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#d97706">
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
-:root{--bg:#f4eee3;--panel:#fffaf2;--panel2:#f7efe0;--line:#ecdfc9;--navy:#f7efe0;--blue:#d97706;--blue2:#b45309;--txt:#3a322a;--mut:#8a7d6a;--green:#15803d;--yellow:#b45309;--red:#dc2626}
-body{background:var(--bg);color:var(--txt);font-family:'Malgun Gothic','Apple SD Gothic Neo',sans-serif;font-size:14px}
+:root{
+ --bg:#f5f0e8; --panel:#fffdfa; --panel2:#f7f2ea; --line:#e8e0d4; --line2:#d9cfc0; --navy:#f7f2ea;
+ --blue:#c2410c; --blue2:#9a3412; --blue-soft:#fdf0e7;
+ --txt:#2a2622; --txt2:#4a443c; --mut:#7d7466; --mut2:#9c9285;
+ --green:#15803d; --green-soft:#eaf5ee; --yellow:#b45309; --red:#c02626;
+ --r-sm:6px; --r:10px; --r-lg:14px; --r-full:999px;
+ --sh:0 1px 2px rgba(60,45,30,.05); --sh-lg:0 4px 14px rgba(60,45,30,.09);
+}
+body{background:var(--bg);color:var(--txt);
+ font-family:'Pretendard Variable',Pretendard,-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+ font-size:14px;line-height:1.65;letter-spacing:-.018em;-webkit-font-smoothing:antialiased}
 .hide{display:none!important}
-input,select,button{font-family:inherit}
-input,select{background:var(--panel2);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:9px 11px;font-size:13px}
-.btn{background:var(--blue);color:#fff;border:none;border-radius:8px;padding:9px 15px;font-size:13px;cursor:pointer;font-weight:600}
-.btn.sm{padding:5px 10px;font-size:12px}.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--mut)}
-/* center cards (setup/login) */
-.center{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
-.cardbox{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:28px;width:380px}
-.cardbox h2{color:var(--blue2);font-size:20px;margin-bottom:4px}
-.cardbox p{color:var(--mut);font-size:12.5px;margin-bottom:16px;line-height:1.6}
-.cardbox label{display:block;font-size:12px;color:var(--mut);margin:10px 0 4px}
+b,strong{font-weight:700}
+input,select,button,textarea{font-family:inherit;letter-spacing:inherit}
+input,select{background:#fff;border:1px solid var(--line2);color:var(--txt);border-radius:var(--r-sm);padding:9px 12px;font-size:14px;line-height:1.4}
+input:focus,select:focus{outline:2px solid var(--blue);outline-offset:-1px;border-color:var(--blue)}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;background:var(--blue);color:#fff;border:none;border-radius:var(--r-sm);padding:9px 16px;font-size:14px;cursor:pointer;font-weight:500;line-height:1.4;transition:background .15s}
+.btn:hover{background:var(--blue2)}
+.btn.sm{padding:6px 12px;font-size:13px}
+.btn.ghost{background:#fff;border:1px solid var(--line2);color:var(--txt2)}
+.btn.ghost:hover{background:var(--panel2)}
+.center{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.cardbox{background:var(--panel);border:1px solid var(--line);border-radius:var(--r-lg);padding:32px;width:400px;box-shadow:var(--sh)}
+.cardbox h2{color:var(--txt);font-size:24px;font-weight:700;line-height:1.3;margin-bottom:6px;letter-spacing:-.03em}
+.cardbox p{color:var(--mut);font-size:14px;margin-bottom:20px;line-height:1.6}
+.cardbox label{display:block;font-size:13px;font-weight:500;color:var(--txt2);margin:16px 0 6px}
 .cardbox input{width:100%}
-.cardbox .btn{width:100%;margin-top:16px}
-.err{color:var(--red);font-size:12px;margin-top:10px;min-height:16px}
-/* app shell */
+.cardbox .btn{width:100%;margin-top:20px;padding:12px}
+.err{color:var(--red);font-size:13px;margin-top:12px;min-height:18px;line-height:1.5}
 .app{display:flex;min-height:100vh}
-.side{width:200px;background:#efe7d8;border-right:1px solid #e2d6c2;flex-shrink:0;padding:18px 0}
-.logo{font-size:18px;font-weight:800;color:var(--blue2);padding:0 20px 4px}
-.logo small{display:block;font-size:11px;color:var(--mut);font-weight:400}
-.nav{margin-top:14px;padding:0 10px}
-.nav a{display:flex;align-items:center;gap:9px;padding:9px 12px;color:var(--mut);font-size:13.5px;border-radius:8px;cursor:pointer;margin-bottom:2px}
-.nav a i{font-size:18px}
-.nav a:hover{background:#fff7ec;color:var(--txt)}.nav a.on{background:var(--blue);color:#fff;font-weight:600}
-.seg{font-size:12px;padding:5px 11px;border-radius:6px;color:var(--mut);cursor:pointer}
-.seg.on{background:var(--panel);color:var(--txt);font-weight:600}
-.smode{display:inline-block;font-size:13px;padding:6px 18px;border-radius:6px;color:var(--mut);cursor:pointer}
-.smode.on{background:#c2410c;color:#fff;font-weight:600}
-.kpi{background:var(--panel2);border-radius:12px;padding:14px 16px}
-.kl{font-size:12px;color:var(--mut);margin-bottom:6px}.kv{font-size:23px;font-weight:800;display:flex;align-items:baseline;gap:8px}.kv.g{color:var(--green)}.kx{font-size:11px;color:var(--mut);margin-top:5px}
-.chip{font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;background:#fde7d3;color:#9a3412}.chip.g{background:#e1f3e8;color:#15803d}
-.nav .grp{font-size:11px;color:#5b6675;padding:14px 12px 4px}
-.logout{position:absolute;bottom:14px;left:20px;font-size:12px;color:var(--mut);cursor:pointer}
-.main{flex:1;padding:24px 30px;overflow:auto;max-height:100vh}
-h1{font-size:21px;margin-bottom:2px}.sub{color:var(--mut);font-size:12.5px;margin-bottom:18px}
-.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:12px;margin-bottom:22px}
-.card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:15px 17px}
-.card.hero{background:#d97706;border-color:#d97706}
-.card .k{font-size:12px;color:var(--mut)}.card .v{font-size:25px;font-weight:800;margin-top:5px}
+.side{width:216px;background:var(--panel);border-right:1px solid var(--line);flex-shrink:0;padding:20px 0}
+.logo{font-size:16px;font-weight:700;color:var(--txt);padding:0 20px 2px;letter-spacing:-.02em}
+.logo small{display:block;font-size:12px;color:var(--mut);font-weight:400;letter-spacing:0}
+.nav{margin-top:20px;padding:0 12px}
+.nav a{display:flex;align-items:center;gap:10px;padding:9px 12px;color:var(--txt2);font-size:14px;border-radius:var(--r-sm);cursor:pointer;margin-bottom:2px;transition:background .12s}
+.nav a i{font-size:20px;color:var(--mut2)}
+.nav a:hover{background:var(--panel2)}
+.nav a.on{background:var(--blue-soft);color:var(--blue2);font-weight:500}
+.nav a.on i{color:var(--blue)}
+.nav .grp{font-size:12px;font-weight:500;color:var(--mut2);padding:18px 12px 6px}
+.seg{font-size:13px;padding:6px 12px;border-radius:var(--r-sm);color:var(--mut);cursor:pointer}
+.seg.on{background:var(--panel);color:var(--txt);font-weight:500;box-shadow:var(--sh)}
+.smode{display:inline-block;font-size:14px;padding:7px 18px;border-radius:var(--r-sm);color:var(--mut);cursor:pointer}
+.smode.on{background:var(--panel);color:var(--blue2);font-weight:500;box-shadow:var(--sh)}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px 20px}
+.kl{font-size:13px;color:var(--mut);margin-bottom:8px}
+.kv{font-size:28px;font-weight:700;line-height:1.2;display:flex;align-items:baseline;gap:8px;font-variant-numeric:tabular-nums;letter-spacing:-.03em}
+.kv.g{color:var(--green)}
+.kx{font-size:12px;color:var(--mut2);margin-top:6px}
+.chip{display:inline-block;font-size:12px;font-weight:500;padding:2px 8px;border-radius:var(--r-full);background:var(--blue-soft);color:var(--blue2);letter-spacing:0}
+.chip.g{background:var(--green-soft);color:var(--green)}
+.logout{position:absolute;bottom:16px;left:20px;font-size:13px;color:var(--mut);cursor:pointer}
+.logout:hover{color:var(--txt)}
+.main{flex:1;padding:32px;overflow:auto;max-height:100vh}
+h1{font-size:24px;font-weight:700;line-height:1.3;letter-spacing:-.03em;margin-bottom:4px}
+h2{font-size:20px;font-weight:700;line-height:1.35;letter-spacing:-.025em}
+.sub{color:var(--mut);font-size:14px;margin-bottom:24px;line-height:1.6}
+.cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:24px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:20px}
+.card .k{font-size:13px;color:var(--mut)}
+.card .v{font-size:28px;font-weight:700;margin-top:6px;font-variant-numeric:tabular-nums;letter-spacing:-.03em}
 .v.b{color:var(--blue2)}.v.g{color:var(--green)}.v.y{color:var(--yellow)}
-.tools{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
-table{width:100%;border-collapse:collapse;background:var(--panel);border-radius:12px;overflow:hidden}
-th,td{padding:9px 11px;text-align:left;font-size:13px;border-bottom:1px solid var(--line)}
-th{background:var(--navy);color:#8a7d6a;font-size:12px}
+.tools{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+table{width:100%;border-collapse:collapse;background:var(--panel);border-radius:var(--r);overflow:hidden;border:1px solid var(--line)}
+th,td{padding:12px 14px;text-align:left;font-size:14px;border-bottom:1px solid var(--line);line-height:1.5}
+tbody tr:last-child td{border-bottom:none}
+th{background:var(--panel2);color:var(--mut);font-size:13px;font-weight:500;letter-spacing:0}
+td .num,.num{font-variant-numeric:tabular-nums}
 tr:hover td{background:var(--panel2)}
-.tag{font-size:11px;padding:2px 8px;border-radius:6px;font-weight:600}
-.대형{background:#ffedd5;color:#c2410c}.중형{background:#fef3c7;color:#92400e}.소형{background:#f1ebe0;color:#78716c}.미상{background:#eee;color:#999}
-.st{font-size:12px;border-radius:6px;padding:5px;border:1px solid var(--line);background:var(--panel2);color:var(--txt)}
-.badge{font-size:11px;padding:3px 9px;border-radius:20px;background:var(--panel2);border:1px solid var(--line);color:var(--mut)}
-.badge b{color:var(--blue2)}.badge.g b{color:var(--green)}
-.box{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px;margin-bottom:16px}
-.box h3{font-size:14px;margin-bottom:10px;color:var(--blue2)}
+.tag{display:inline-block;font-size:12px;padding:2px 8px;border-radius:var(--r-sm);font-weight:500;letter-spacing:0}
+.대형{background:#fdf0e7;color:#9a3412}.중형{background:#fdf4e3;color:#92400e}.소형{background:#f2efe9;color:#6b6459}.미상{background:#f0eee9;color:#948c80}
+.st{font-size:13px;border-radius:var(--r-sm);padding:6px 8px;border:1px solid var(--line2);background:#fff;color:var(--txt)}
+.badge{display:inline-block;font-size:12px;padding:3px 9px;border-radius:var(--r-full);background:var(--panel2);border:1px solid var(--line);color:var(--mut);letter-spacing:0}
+.badge b{color:var(--txt2);font-weight:500}.badge.g b{color:var(--green)}
+.box{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:20px;margin-bottom:16px}
+.box h3{font-size:16px;font-weight:700;margin-bottom:12px;color:var(--txt);letter-spacing:-.02em}
 .flex{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
-.del{color:var(--red);cursor:pointer}.link{color:var(--blue2);cursor:pointer}
-.toast{position:fixed;bottom:18px;right:18px;background:var(--green);color:#fff;padding:10px 16px;border-radius:8px;font-size:13px;opacity:0;transition:.3s;pointer-events:none}
-.toast.show{opacity:1}
-.loading{color:var(--mut);padding:40px;text-align:center}
+.del{color:var(--red);cursor:pointer}.link{color:var(--blue2);cursor:pointer;font-weight:500}
+.toast{position:fixed;bottom:20px;right:20px;background:var(--txt);color:#fff;padding:12px 18px;border-radius:var(--r);font-size:14px;font-weight:500;opacity:0;transform:translateY(8px);transition:.25s;pointer-events:none;box-shadow:var(--sh-lg);z-index:99}
+.toast.show{opacity:1;transform:translateY(0)}
+.loading{color:var(--mut);padding:48px;text-align:center;font-size:14px}
+.pbar{height:6px;background:var(--line);border-radius:var(--r-full);overflow:hidden}
+.pbar i{display:block;height:100%;background:var(--blue);transition:width .3s}
+@media(max-width:640px){
+ .app{flex-direction:column}
+ .side{width:100%;border-right:none;border-bottom:1px solid var(--line);padding:12px 0;position:relative}
+ .nav{display:flex;overflow-x:auto;gap:4px;margin-top:12px}
+ .nav .grp{display:none}
+ .nav a{white-space:nowrap;margin-bottom:0}
+ .logout{position:static;padding:8px 20px 0}
+ .main{padding:20px 16px;max-height:none}
+ h1{font-size:24px}
+}
 </style></head>
 <body>
 
@@ -104,7 +140,7 @@ tr:hover td{background:var(--panel2)}
       <a data-v="map"><i class="ti ti-map-pin"></i>지도</a>
       <a data-v="route"><i class="ti ti-route"></i>동선</a>
       <div class="grp">고객·정산</div>
-      <a data-v="leads"><i class="ti ti-inbox"></i>문의함<span id="leadBadge" style="display:none;margin-left:auto;background:#dc2626;color:#fff;font-size:11px;font-weight:800;border-radius:99px;padding:1px 7px"></span></a>
+      <a data-v="leads"><i class="ti ti-inbox"></i>문의함<span id="leadBadge" style="display:none;margin-left:auto;background:#dc2626;color:#fff;font-size:12px;font-weight:700;border-radius:999px;padding:1px 7px"></span></a>
       <a data-v="clients"><i class="ti ti-file-check"></i>계약 호실</a>
       <a data-v="todo"><i class="ti ti-checklist"></i>할일</a>
     </div>
@@ -198,7 +234,7 @@ function go(view,arg){
   else if(view==="detail")renderDetail(arg);
   else if(view==="leads")viewLeads();
   else if(view==="clients")viewClients();
-  else V.innerHTML='<h1>할일</h1><div class="sub">재방문(next_date) 알림 — 다음 단계에서 연결</div><div class="box">🚧 준비중</div>';
+  else V.innerHTML='<h1>할일</h1><div class="sub">재방문(next_date) 알림 — 다음 단계에서 연결</div><div class="box"><i class="ti ti-tool" aria-hidden="true"></i> 준비중</div>';
 }
 window.go=go;
 
@@ -220,16 +256,16 @@ function viewDash(){
   const legend=segs.map(s=>`<div style="margin:3px 0">${dot(s.c)}${s.label} ${s.n}</div>`).join("");
   const topZone=zc[0]||{z:"-",n:0};
   const mx=zc[0]?zc[0].n:1;
-  const bars=zc.slice(0,6).map(x=>`<div style="margin-bottom:11px"><div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:4px"><span>${x.z}</span><span style="color:var(--mut)">${x.n}곳</span></div><div style="height:7px;background:var(--panel2);border-radius:5px;overflow:hidden"><i style="display:block;height:100%;background:var(--blue);width:${Math.round(x.n/mx*100)}%"></i></div></div>`).join("");
+  const bars=zc.slice(0,6).map(x=>`<div style="margin-bottom:11px"><div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:4px"><span>${x.z}</span><span style="color:var(--mut)">${x.n}곳</span></div><div style="height:7px;background:var(--panel2);border-radius:6px;overflow:hidden"><i style="display:block;height:100%;background:var(--blue);width:${Math.round(x.n/mx*100)}%"></i></div></div>`).join("");
   return `<h1>대시보드</h1><div class="sub">서울 지식산업센터 ${total}곳 · 영업/계약은 호실 단위 · 클라우드 저장</div>
    <div style="background:#c2410c;border-radius:14px;padding:20px 22px;margin-bottom:18px;color:#fff">
      <div style="font-size:12px;opacity:.85;margin-bottom:6px">이번 동선 추천</div>
-     <div style="font-size:21px;font-weight:800;line-height:1.3;margin-bottom:14px">${topZone.z} 권역 ${topZone.n}곳부터<br>집중 공략해 보세요</div>
+     <div style="font-size:20px;font-weight:700;line-height:1.3;margin-bottom:14px">${topZone.z} 권역 ${topZone.n}곳부터<br>집중 공략해 보세요</div>
      <button class="btn" style="background:#fff;color:#9a3412" onclick="go('sales')">영업보드 열기 →</button>
    </div>
    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
-     <span style="font-size:15px;font-weight:800;color:var(--txt)">주간 영업 현황</span>
-     <div style="display:flex;gap:2px;background:var(--panel2);border-radius:8px;padding:2px">
+     <span style="font-size:14px;font-weight:700;color:var(--txt)">주간 영업 현황</span>
+     <div style="display:flex;gap:2px;background:var(--panel2);border-radius:10px;padding:2px">
        <span class="seg">일</span><span class="seg on">주</span><span class="seg">월</span><span class="seg">년</span>
      </div>
    </div>
@@ -246,7 +282,7 @@ function viewDash(){
      <div class="box" style="flex:1;min-width:220px">
        <h3>권역 비중</h3>
        <div style="display:flex;align-items:center;gap:14px;margin-top:6px">
-         <svg viewBox="0 0 120 120" style="width:120px;height:120px;flex-shrink:0"><g transform="rotate(-90 60 60)">${circ}</g><text x="60" y="58" text-anchor="middle" style="font-size:21px;font-weight:800" fill="var(--txt)">${total}</text><text x="60" y="74" text-anchor="middle" style="font-size:10px" fill="var(--mut)">건물</text></svg>
+         <svg viewBox="0 0 120 120" style="width:120px;height:120px;flex-shrink:0"><g transform="rotate(-90 60 60)">${circ}</g><text x="60" y="58" text-anchor="middle" style="font-size:20px;font-weight:700" fill="var(--txt)">${total}</text><text x="60" y="74" text-anchor="middle" style="font-size:12px" fill="var(--mut)">건물</text></svg>
          <div style="font-size:12px;color:var(--txt)">${legend}</div>
        </div>
      </div>
@@ -255,7 +291,7 @@ function viewDash(){
 let SMODE="list";
 function viewSales(){
   return `<h1>영업보드</h1><div class="sub">건물 ${BUILDINGS.length}곳 · 클릭하면 호실별 영업·견적·계약 관리</div>
-   <div style="display:flex;gap:3px;background:var(--panel2);border-radius:9px;padding:3px;width:fit-content;margin-bottom:14px">
+   <div style="display:flex;gap:3px;background:var(--panel2);border-radius:10px;padding:3px;width:fit-content;margin-bottom:14px">
      <span class="smode" data-m="list">목록</span><span class="smode" data-m="route">권역별</span>
    </div>
    <div id="sbody"></div>`;
@@ -284,9 +320,9 @@ function renderSalesRows(){
   const fz=$("fz").value,fg=$("fg").value,fq=($("fq").value||"").trim();
   const list=BUILDINGS.filter(b=>(!fz||b.zone===fz)&&(!fg||b.size_grade===fg)&&(!fq||(b.name||"").includes(fq)||(b.address||"").includes(fq))).sort((a,b)=>(+b.units||0)-(+a.units||0));
   $("tb").innerHTML=list.map(b=>{const a=UNITAGG[b.id]||{n:0,c:0};
-    return `<tr><td>${b.zone}</td><td>${b.road||""}</td><td><b>${b.name}</b><div style="color:var(--mut);font-size:11px">${b.address||""}</div></td>
+    return `<tr><td>${b.zone}</td><td>${b.road||""}</td><td><b>${b.name}</b><div style="color:var(--mut);font-size:12px">${b.address||""}</div></td>
      <td><span class="tag ${b.size_grade}">${b.size_grade}</span></td>
-     <td><b style="color:var(--blue2)">${b.units!=null?b.units+"호":"-"}</b><div style="color:var(--mut);font-size:11px">지상 ${b.floors||"-"}층</div></td>
+     <td><b style="color:var(--blue2)">${b.units!=null?b.units+"호":"-"}</b><div style="color:var(--mut);font-size:12px">지상 ${b.floors||"-"}층</div></td>
      <td><span class="badge">관리 <b>${a.n}</b></span> <span class="badge g">계약 <b>${a.c}</b></span>${RVISIT[b.id]?` <span class="badge g">전단지✓</span>`:""}</td>
      <td><button class="btn sm" onclick="go('detail','${b.id}')">상세 →</button></td></tr>`}).join("");
 }
@@ -313,7 +349,7 @@ async function renderDetail(bid){
      <td><select class="st" data-f="sales_status">${STATUSES.map(s=>`<option ${s===u.sales_status?"selected":""}>${s}</option>`).join("")}</select></td>
      <td><input value="${u.memo||""}" data-f="memo" placeholder="담당자·연락처·재방문" style="width:220px"></td>
      <td><span class="del" data-del="${u.id}">✕</span></td></tr>`).join("");
-  $("view").innerHTML=`<div class="flex" style="justify-content:space-between"><h1>${b.name}</h1><button class="btn ghost sm" onclick="go('sales')">← 목록</button></div>
+  $("view").innerHTML=`<div class="flex" style="justify-content:space-between"><h1>${b.name}</h1><button class="btn ghost sm" onclick="go('sales')"><i class="ti ti-arrow-left" aria-hidden="true"></i> 목록</button></div>
    <div class="sub">${b.zone} · ${b.road||""} · <span class="tag ${b.size_grade}">${b.size_grade}</span> · ${b.gross_area? b.gross_area.toLocaleString()+"㎡":""} · ${b.gu} ${b.address||""}</div>
    <div class="box"><h3>관리실 연락처 (건물)</h3><div class="flex">
      <input id="cm" value="${c.name||""}" placeholder="관리소장/총무">
@@ -377,7 +413,7 @@ function loadKakao(){
 function kakaoSetupHtml(){
   return `<h1>지도 — 카카오 키 설정</h1><div class="sub">한 번만 설정하면 됩니다 (무료)</div>
    <div class="box" style="max-width:580px">
-    <p style="color:var(--mut);line-height:1.8;font-size:12.5px">
+    <p style="color:var(--mut);line-height:1.8;font-size:13px">
     1) <b>developers.kakao.com</b> 로그인 → <b>내 애플리케이션 → 애플리케이션 추가하기</b><br>
     2) 만든 앱 → <b>앱 키</b>에서 <b>JavaScript 키</b> 복사<br>
     3) 같은 앱 → <b>플랫폼 → Web 플랫폼 등록</b>에 이 앱의 주소 등록<br>
@@ -436,7 +472,7 @@ function drawPins(){
     el.onclick=()=>{ const a=UNITAGG[b.id]||{n:0,c:0};
       if(kInfo)kInfo.close();
       kInfo=new kakao.maps.InfoWindow({removable:true,position:pos,content:
-        `<div style="padding:9px 11px;font-size:12.5px;min-width:160px;line-height:1.6">
+        `<div style="padding:9px 11px;font-size:13px;min-width:160px;line-height:1.6">
           <b>${b.name}</b><br><span style="color:#999">${b.zone} · ${b.size_grade||""}</span><br>
           <span style="color:#555">총 ${b.units?b.units+"호실":"-"} · 지상 ${b.floors||"-"}층${b.floors_b?"/지하"+b.floors_b:""}</span><br>
           관리 호실 ${a.n} · 계약 ${a.c}<br>
@@ -463,7 +499,7 @@ async function viewMap(){
        <span class="badge"><i style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#d97706;margin-right:5px"></i>진행중</span>
        <span class="badge g"><i style="display:inline-block;width:9px;height:9px;border-radius:50%;background:#15803d;margin-right:5px"></i>계약</span>
      </div></div>
-   <div id="kmap" style="width:100%;height:70vh;border:1px solid var(--line);border-radius:12px"></div>`;
+   <div id="kmap" style="width:100%;height:70vh;border:1px solid var(--line);border-radius:10px"></div>`;
   try{ await loadKakao(); }
   catch(e){ if($("mstat"))$("mstat").textContent="지도 로드 실패 — 카카오 키/도메인 등록을 확인하세요.";
     if(e==="nokey"){V.innerHTML=kakaoSetupHtml();} return; }
@@ -531,14 +567,14 @@ function viewRoute(){
      <div class="flex" style="gap:14px;margin-bottom:12px">
        <div>${rlab("권역")}<select id="rz">${zs.map(z=>`<option>${z}</option>`).join("")}</select></div>
        <div>${rlab("대상")}<select id="rt"><option value="mi">미접촉만</option><option value="prog">진행중 포함</option></select></div>
-       <div>${rlab("이동수단")}<select id="rmode"><option value="차량">🚗 차량(실도로)</option><option value="도보">🚶 도보(실보행)</option></select></div>
+       <div>${rlab("이동수단")}<select id="rmode"><option value="차량">차량 (실도로)</option><option value="도보">도보 (실보행)</option></select></div>
      </div>
      <div class="flex" style="gap:14px;margin-bottom:14px">
        <div>${rlab("개수")}<select id="rcnt"><option value="8">8곳</option><option value="12" selected>12곳</option><option value="20">20곳</option><option value="99">제한없음</option></select></div>
        <div>${rlab("우선순위")}<select id="rpri"><option value="near">가까운 순</option><option value="units">호실 많은 순</option></select></div>
        <div>${rlab("하루 호실 상한 (알바)")}<select id="rcap"><option value="0">없음</option><option value="1500" selected>합계 1,500 미만</option><option value="2000">합계 2,000 미만</option><option value="3000">합계 3,000 미만</option></select></div>
      </div>
-     <button class="btn" onclick="genRoute()">🧭 동선 생성</button>
+     <button class="btn" onclick="genRoute()"><i class="ti ti-route" aria-hidden="true"></i> 동선 생성</button>
    </div>
    <div id="rresult"></div>
    <div id="rassign"></div>`;
@@ -581,17 +617,17 @@ function showRouteResult(){
      <div style="background:#241c15;color:#fff;padding:13px 16px">
        <div style="font-size:12px;opacity:.8" id="rcap2">동선 · ${RROUTE.length}곳</div>
        <div style="font-size:13px;margin-top:3px" id="rmeta">경로 계산 중…</div>
-       <div style="height:6px;background:rgba(255,255,255,.25);border-radius:99px;margin-top:9px;overflow:hidden"><i id="rprog" style="display:block;height:100%;background:#8fc79a;width:0;transition:width .3s"></i></div>
+       <div style="height:6px;background:rgba(255,255,255,.25);border-radius:999px;margin-top:9px;overflow:hidden"><i id="rprog" style="display:block;height:100%;background:#8fc79a;width:0;transition:width .3s"></i></div>
      </div>
      <div id="rmap" style="width:100%;height:300px"></div>
-     <div id="rsum" style="padding:11px 16px;background:var(--panel2);font-size:12.5px;color:var(--mut);border-bottom:1px solid var(--line)">총 ${RROUTE.length}곳 · 호실 합계 ${totU.toLocaleString()}</div>
+     <div id="rsum" style="padding:11px 16px;background:var(--panel2);font-size:13px;color:var(--mut);border-bottom:1px solid var(--line)">총 ${RROUTE.length}곳 · 호실 합계 ${totU.toLocaleString()}</div>
      <div id="rlist"></div>
    </div>
    <div class="box" style="margin-top:12px"><h3>알바에게 배정</h3>
      <div class="flex"><input id="aEmail" type="email" placeholder="알바 이메일 (가입 전이어도 OK)" style="flex:1;min-width:220px">
      <button class="btn" onclick="assignRoute()">이 동선 배정</button></div>
      <div class="sub" style="margin:8px 0 0">알바가 앱에서 이 이메일로 회원가입/로그인하면 <b>이 동선만</b> 보입니다. 진행 상황은 아래 '배정 현황'에서.</div></div>
-   <button class="btn ghost sm" onclick="go('route')">← 다시 만들기</button>`;
+   <button class="btn ghost sm" onclick="go('route')"><i class="ti ti-arrow-left" aria-hidden="true"></i> 다시 만들기</button>`;
   rmap=null; rov=[]; rline=null;   // 매번 새 #rmap에 새 지도 (재생성 시 stale map 방지)
 }
 window.assignRoute=async()=>{
@@ -604,7 +640,7 @@ window.assignRoute=async()=>{
   const today=new Date(); const dstr=(today.getMonth()+1)+"/"+today.getDate();
   const {error}=await sb.from("routes").insert({owner_id:owner,worker_email:email,title:`${z||"동선"} ${dstr} (${RROUTE.length}곳)`,zone:z,mode:RMODE,stops,status:"active"});
   if(error){ toast("배정 실패: "+error.message); return; }
-  toast("✅ 배정됨 → "+email); if($("aEmail"))$("aEmail").value="";
+  toast("배정됨 → "+email); if($("aEmail"))$("aEmail").value="";
   loadAssignments();
 };
 async function loadAssignments(){
@@ -618,7 +654,7 @@ async function loadAssignments(){
     if(v.dist_m!=null&&v.dist_m<=200) vok[v.route_id]=(vok[v.route_id]||0)+1;
     if(v.photo_path)(pmap[v.route_id]=pmap[v.route_id]||[]).push(v.photo_path);
     const t=tmap[v.route_id]; if(!t||v.created_at>t) tmap[v.route_id]=v.created_at; });
-  box.innerHTML=`<h3 style="font-size:15px;margin:22px 0 10px;color:var(--blue2)">배정 현황 (${rs.length})</h3>`+rs.map(r=>{
+  box.innerHTML=`<h3 style="font-size:14px;margin:22px 0 10px;color:var(--blue2)">배정 현황 (${rs.length})</h3>`+rs.map(r=>{
     const total=(r.stops||[]).length, done=(vmap[r.id]||new Set()).size;
     const pct=total?Math.round(done/total*100):0;
     const last=tmap[r.id]? new Date(tmap[r.id]).toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):"기록 없음";
@@ -627,13 +663,13 @@ async function loadAssignments(){
       <div class="flex" style="justify-content:space-between">
         <div><b style="font-size:14px">${r.title||r.zone||'동선'}</b>
           <span class="badge" style="margin-left:6px">${r.mode||''}</span>
-          <div class="sub" style="margin:3px 0 0">👤 ${r.worker_email||'미지정'} · 마지막 체크 ${last}${(vok[r.id]||0)>0?` · <span style="color:var(--green)">현장확인 ${vok[r.id]}</span>`:''}</div></div>
+          <div class="sub" style="margin:3px 0 0"><i class="ti ti-user" aria-hidden="true"></i> ${r.worker_email||'미지정'} · 마지막 체크 ${last}${(vok[r.id]||0)>0?` · <span style="color:var(--green)">현장확인 ${vok[r.id]}</span>`:''}</div></div>
         <div style="text-align:right;flex-shrink:0">
-          <b style="font-size:17px;color:${cdone?'var(--green)':'var(--blue2)'}">${done}/${total}</b>
+          <b style="font-size:16px;color:${cdone?'var(--green)':'var(--blue2)'}">${done}/${total}</b>
           <span class="del" style="margin-left:10px;font-size:13px" onclick="delRoute('${r.id}')">삭제</span></div>
       </div>
       <div style="height:8px;background:var(--panel2);border-radius:6px;overflow:hidden;margin-top:9px"><i style="display:block;height:100%;width:${pct}%;background:${cdone?'var(--green)':'var(--blue)'}"></i></div>
-      ${(pmap[r.id]&&pmap[r.id].length)?`<div class="flex" style="gap:6px;margin-top:9px">${pmap[r.id].slice(0,6).map(p=>`<a href="${VP_PUB}${p}" target="_blank" rel="noopener"><img src="${VP_PUB}${p}" style="width:44px;height:44px;object-fit:cover;border-radius:8px;border:1px solid var(--line)"></a>`).join("")}${pmap[r.id].length>6?`<span class="badge">+${pmap[r.id].length-6}</span>`:""}</div>`:""}
+      ${(pmap[r.id]&&pmap[r.id].length)?`<div class="flex" style="gap:6px;margin-top:9px">${pmap[r.id].slice(0,6).map(p=>`<a href="${VP_PUB}${p}" target="_blank" rel="noopener"><img src="${VP_PUB}${p}" style="width:44px;height:44px;object-fit:cover;border-radius:10px;border:1px solid var(--line)"></a>`).join("")}${pmap[r.id].length>6?`<span class="badge">+${pmap[r.id].length-6}</span>`:""}</div>`:""}
     </div>`;}).join("");
 }
 window.delRoute=async(id)=>{ if(!confirm("이 동선 배정을 삭제할까요? (알바 화면에서도 사라집니다)"))return;
@@ -647,8 +683,8 @@ function renderRouteList(){
     return `<div style="display:flex;gap:11px;padding:11px 14px;border-bottom:1px solid var(--line);align-items:flex-start;${dn?'opacity:.5':''}${(!dn&&i===cur)?'box-shadow:inset 0 0 0 2px var(--blue)':''}">
       <div style="flex-shrink:0;width:25px;height:25px;border-radius:50%;background:${dn?'#15803d':'#c2410c'};color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;margin-top:1px">${dn?'✓':(i+1)}</div>
       <div style="flex:1;min-width:0">
-        <div style="font-size:13.5px;font-weight:600;${dn?'text-decoration:line-through;color:var(--mut)':''}">${b.n}</div>
-        <div style="font-size:11.5px;color:var(--mut);margin:2px 0 6px"><span style="color:${col}">●</span> ${b.s} · ${b.u.toLocaleString()}호${flyer?' · <span style="color:#15803d">전단지 배포함</span>':''}</div>
+        <div style="font-size:14px;font-weight:500;${dn?'text-decoration:line-through;color:var(--mut)':''}">${b.n}</div>
+        <div style="font-size:12px;color:var(--mut);margin:2px 0 6px"><span style="color:${col}">●</span> ${b.s} · ${b.u.toLocaleString()}호${flyer?' · <span style="color:#15803d">전단지 배포함</span>':''}</div>
         <div class="flex" style="gap:6px">
           <a class="btn sm" style="text-decoration:none" href="https://map.kakao.com/link/to/${encodeURIComponent(b.n)},${b.la},${b.ln}" target="_blank" rel="noopener">길찾기</a>
           <span class="btn sm ghost" onclick="rToggle(${i})">${dn?'취소':'방문완료'}</span>
@@ -684,7 +720,7 @@ function rStraight(){
   let dist=0; for(let i=1;i<RROUTE.length;i++) dist+=rhav(RROUTE[i-1],RROUTE[i]);
   rDrawLine(RROUTE.map(b=>new kakao.maps.LatLng(b.la,b.ln)),"#9ca3af",true);
   const mins=Math.round(dist/0.067);
-  setRMeta(`${RMODE==='도보'?'🚶 도보':'🚗 차량'}(직선 추정) ${dist.toFixed(1)}km · 약 ${mins}분`);
+  setRMeta(`${RMODE==='도보'?'도보':'차량'}(직선 추정) ${dist.toFixed(1)}km · 약 ${mins}분`);
 }
 async function applyRouteMap(){
   try{ await loadKakao(); }catch(e){ setRMeta("지도 로드 실패 — 지도 탭에서 카카오 키를 먼저 설정하세요."); return; }
@@ -699,7 +735,7 @@ async function applyRouteMap(){
       if(rt&&rt.result_code===0){
         const path=[]; rt.sections.forEach(s=>s.roads&&s.roads.forEach(rd=>{for(let i=0;i<rd.vertexes.length;i+=2)path.push(new kakao.maps.LatLng(rd.vertexes[i+1],rd.vertexes[i]));}));
         rDrawLine(path,"#c2410c",false);
-        setRMeta(`🚗 차량 ${(rt.summary.distance/1000).toFixed(1)}km · ${Math.round(rt.summary.duration/60)}분 · 실도로`);
+        setRMeta(`차량 ${(rt.summary.distance/1000).toFixed(1)}km · ${Math.round(rt.summary.duration/60)}분 · 실도로`);
         if($("rsum"))$("rsum").innerHTML=`총 <b>${RROUTE.length}곳</b> · 호실 합계 <b>${totU.toLocaleString()}</b> · 실도로`;
         return;
       }
@@ -713,7 +749,7 @@ async function applyRouteMap(){
       if(d.code==="Ok"&&rt){
         const path=rt.geometry.coordinates.map(c=>new kakao.maps.LatLng(c[1],c[0]));
         rDrawLine(path,"#15803d",false);
-        setRMeta(`🚶 도보 ${(rt.distance/1000).toFixed(1)}km · ${Math.round(rt.duration/60)}분 · 실보행`);
+        setRMeta(`도보 ${(rt.distance/1000).toFixed(1)}km · ${Math.round(rt.duration/60)}분 · 실보행`);
         if($("rsum"))$("rsum").innerHTML=`총 <b>${RROUTE.length}곳</b> · 호실 합계 <b>${totU.toLocaleString()}</b> · 실보행로`;
         return;
       }
@@ -735,8 +771,8 @@ async function showWorkerApp(){
   if(WROUTES.length){ const {data:vs}=await sb.from("visits").select("route_id,building_id");
     (vs||[]).forEach(v=>{(prog[v.route_id]=prog[v.route_id]||new Set()).add(v.building_id)}); }
   V.innerHTML=`<div class="flex" style="justify-content:space-between;align-items:center">
-    <h1 style="font-size:23px">내 동선</h1>
-    <button class="btn ghost sm" onclick="showWorkerApp()">↻ 새로고침</button></div>
+    <h1 style="font-size:24px">내 동선</h1>
+    <button class="btn ghost sm" onclick="showWorkerApp()"><i class="ti ti-refresh" aria-hidden="true"></i> 새로고침</button></div>
    <div class="sub">${MYEMAIL} · <span class="link" onclick="doLogout()">로그아웃</span></div>`+
    (WROUTES.length? WROUTES.map((r,i)=>{const total=(r.stops||[]).length,done=(prog[r.id]||new Set()).size;const pct=total?Math.round(done/total*100):0;
      return `<div class="box" style="cursor:pointer;padding:16px 18px" onclick="openWRoute(${i})">
@@ -744,7 +780,7 @@ async function showWorkerApp(){
        <b style="font-size:16px;color:${pct>=100?'var(--green)':'var(--blue2)'}">${done}/${total}</b></div>
        <div style="height:8px;background:var(--panel2);border-radius:6px;overflow:hidden;margin-top:10px"><i style="display:block;height:100%;width:${pct}%;background:${pct>=100?'var(--green)':'var(--blue)'}"></i></div>
        <div class="sub" style="margin:8px 0 0">${r.zone||''} · ${r.mode||''} · ${new Date(r.created_at).toLocaleDateString()}</div></div>`;}).join("")
-    : '<div class="box" style="font-size:15px;line-height:1.7">아직 배정된 동선이 없습니다.<br>사장님이 동선을 배정하면 여기 표시됩니다.<br><span style="color:var(--mut);font-size:13px">※ 가입한 이메일이 배정받은 이메일과 같아야 해요.</span></div>');
+    : '<div class="box" style="font-size:14px;line-height:1.7">아직 배정된 동선이 없습니다.<br>사장님이 동선을 배정하면 여기 표시됩니다.<br><span style="color:var(--mut);font-size:13px">※ 가입한 이메일이 배정받은 이메일과 같아야 해요.</span></div>');
 }
 window.openWRoute=async(i)=>{
   WCUR=WROUTES[i]; const stops=WCUR.stops||[]; WDONE=new Set(); WTIME={}; WLOC={}; WVID={}; WPHO={};
@@ -757,12 +793,12 @@ function wNext(){ const st=WCUR.stops||[]; for(let i=0;i<st.length;i++) if(!WDON
 function renderWRoute(){
   const stops=WCUR.stops||[];
   $("view").innerHTML=`<div class="flex" style="justify-content:space-between;align-items:center">
-    <h1 style="font-size:21px">${WCUR.title||WCUR.zone||'동선'}</h1>
-    <button class="btn ghost sm" onclick="showWorkerApp()">← 목록</button></div>
+    <h1 style="font-size:20px">${WCUR.title||WCUR.zone||'동선'}</h1>
+    <button class="btn ghost sm" onclick="showWorkerApp()"><i class="ti ti-arrow-left" aria-hidden="true"></i> 목록</button></div>
    <div style="margin:10px 0 6px"><div class="flex" style="justify-content:space-between;font-size:14px">
      <span style="color:var(--mut)">진행</span><b id="wprog" style="font-size:16px">${WDONE.size}/${stops.length}</b></div>
    <div style="height:10px;background:var(--panel2);border-radius:6px;overflow:hidden;margin-top:6px"><i id="wbar" style="display:block;height:100%;width:${stops.length?Math.round(WDONE.size/stops.length*100):0}%;background:var(--green);transition:width .3s"></i></div></div>
-   <div id="wmap" style="width:100%;height:260px;border:1px solid var(--line);border-radius:12px;margin:10px 0 14px"></div>
+   <div id="wmap" style="width:100%;height:260px;border:1px solid var(--line);border-radius:10px;margin:10px 0 14px"></div>
    <div id="wlist"></div>`;
   wmap=null; wov=[]; wline=null;
   renderWList(); drawWMap();
@@ -771,23 +807,23 @@ function wCard(s,i,hero){
   const dn=WDONE.has(i);
   const time=dn&&WTIME[i]? new Date(WTIME[i]).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}):"";
   if(dn) return `<div class="box" style="padding:12px 16px;opacity:.6;display:flex;gap:12px;align-items:center">
-     <div style="width:30px;height:30px;border-radius:50%;background:var(--green);color:#fff;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">✓</div>
-     <div style="flex:1;min-width:0"><div style="font-size:15px;font-weight:600;text-decoration:line-through;color:var(--mut)">${s.name}</div>
+     <div style="width:30px;height:30px;border-radius:50%;background:var(--green);color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">✓</div>
+     <div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:500;text-decoration:line-through;color:var(--mut)">${s.name}</div>
      <div class="sub" style="margin:1px 0 0">완료 ${time}${(WLOC[i]&&WLOC[i].d!=null)?(WLOC[i].d<=200?` · <span style="color:var(--green);font-weight:700">현장 ${WLOC[i].d}m ✓</span>`:` · <span style="color:#b45309;font-weight:700">위치 ${WLOC[i].d}m 밖</span>`):" · 위치 미확인"}</div></div>
-     ${WPHO[i]?`<a href="${VP_PUB}${WPHO[i]}" target="_blank" rel="noopener" style="flex-shrink:0;font-size:12px;font-weight:700;color:var(--green);text-decoration:none">📷 인증됨</a>`:`<span onclick="wPhoto(${i})" style="flex-shrink:0;cursor:pointer;font-size:12px;font-weight:700;color:var(--blue2);border:1.5px solid var(--line);border-radius:8px;padding:8px 11px;background:var(--panel2)">📷 사진</span>`}</div>`;
+     ${WPHO[i]?`<a href="${VP_PUB}${WPHO[i]}" target="_blank" rel="noopener" style="flex-shrink:0;font-size:12px;font-weight:700;color:var(--green);text-decoration:none"><i class="ti ti-camera" aria-hidden="true"></i> 인증됨</a>`:`<span onclick="wPhoto(${i})" style="flex-shrink:0;cursor:pointer;font-size:12px;font-weight:700;color:var(--blue2);border:1.5px solid var(--line);border-radius:10px;padding:8px 11px;background:var(--panel2)"><i class="ti ti-camera" aria-hidden="true"></i> 사진</span>`}</div>`;
   return `<div class="box" style="padding:${hero?'18px 18px 16px':'14px 16px'};${hero?'border:2px solid var(--blue);box-shadow:0 4px 14px rgba(217,119,6,.18)':''}">
-     ${hero?'<div style="font-size:12px;font-weight:800;color:var(--blue2);letter-spacing:.06em;margin-bottom:8px">👉 다음 차례</div>':''}
+     ${hero?'<div style="font-size:12px;font-weight:700;color:var(--blue2);letter-spacing:.06em;margin-bottom:8px">다음 차례</div>':''}
      <div style="display:flex;gap:13px;align-items:flex-start">
-       <div style="width:${hero?'38px':'30px'};height:${hero?'38px':'30px'};border-radius:50%;background:#c2410c;color:#fff;font-weight:800;font-size:${hero?'17px':'14px'};display:flex;align-items:center;justify-content:center;flex-shrink:0">${i+1}</div>
+       <div style="width:${hero?'38px':'30px'};height:${hero?'38px':'30px'};border-radius:50%;background:#c2410c;color:#fff;font-weight:700;font-size:${hero?'17px':'14px'};display:flex;align-items:center;justify-content:center;flex-shrink:0">${i+1}</div>
        <div style="flex:1;min-width:0">
          <div style="font-size:${hero?'18px':'15.5px'};font-weight:700;line-height:1.35">${s.name}</div>
          ${s.address?`<div style="font-size:${hero?'14px':'13px'};color:var(--mut);margin-top:3px">${s.address}</div>`:''}
          <div style="font-size:13px;color:var(--mut);margin-top:2px">${(+s.units||0).toLocaleString()}호실</div>
          <div class="flex" style="gap:8px;margin-top:${hero?'14px':'10px'};flex-wrap:nowrap">
            <a href="https://map.kakao.com/link/to/${encodeURIComponent(s.name)},${s.lat},${s.lng}" target="_blank" rel="noopener"
-              style="flex:1;text-align:center;text-decoration:none;background:var(--panel2);border:1.5px solid var(--line);color:var(--txt);font-size:15px;font-weight:700;padding:${hero?'14px':'11px'} 0;border-radius:10px">🧭 길찾기</a>
+              style="flex:1;text-align:center;text-decoration:none;background:var(--panel2);border:1.5px solid var(--line);color:var(--txt);font-size:14px;font-weight:700;padding:${hero?'14px':'11px'} 0;border-radius:10px"><i class="ti ti-navigation" aria-hidden="true"></i> 길찾기</a>
            <span onclick="wVisit(${i})"
-              style="flex:1.3;text-align:center;cursor:pointer;background:var(--blue);color:#fff;font-size:15px;font-weight:800;padding:${hero?'14px':'11px'} 0;border-radius:10px">✓ 방문완료</span>
+              style="flex:1.3;text-align:center;cursor:pointer;background:var(--blue);color:#fff;font-size:14px;font-weight:700;padding:${hero?'14px':'11px'} 0;border-radius:10px"><i class="ti ti-check" aria-hidden="true"></i> 방문완료</span>
          </div>
        </div></div></div>`;
 }
@@ -799,7 +835,7 @@ function renderWList(){
   if(nx>=0) h+=wCard(stops[nx],nx,true);
   undone.filter(i=>i!==nx).forEach(i=>h+=wCard(stops[i],i,false));
   if(done.length) h+=`<div class="sub" style="margin:14px 0 8px">완료 (${done.length})</div>`+done.map(i=>wCard(stops[i],i,false)).join("");
-  if(nx<0) h=`<div class="box" style="text-align:center;padding:26px;font-size:17px;font-weight:800;color:var(--green)">🎉 오늘 동선 완료!<div class="sub" style="margin-top:6px;font-weight:400">수고하셨습니다. 사장님께 자동으로 집계됩니다.</div></div>`+h;
+  if(nx<0) h=`<div class="box" style="text-align:center;padding:26px;font-size:16px;font-weight:700;color:var(--green)"><i class="ti ti-circle-check" aria-hidden="true"></i> 오늘 동선 완료!<div class="sub" style="margin-top:6px;font-weight:400">수고하셨습니다. 사장님께 자동으로 집계됩니다.</div></div>`+h;
   $("wlist").innerHTML=h;
 }
 window.wVisit=async(i)=>{
@@ -824,7 +860,7 @@ window.wVisit=async(i)=>{
     return;
   }
   if(ins && ins[0]) WVID[i]=ins[0].id;
-  toast("✓ 방문 기록됨");
+  toast("방문 기록됨");
   // 2) 위치는 백그라운드로 붙임
   getLoc(8000).then(async loc=>{
     if(!loc || !s.lat || !s.lng || !WVID[i]) return;
@@ -916,7 +952,7 @@ window.wPhoto=(i)=>{
     if(up.error){ toast("업로드 실패: "+up.error.message); return; }
     const upd=await sb.from("visits").update({photo_path:path}).eq("id",WVID[i]);
     if(upd.error){ toast("저장 실패: "+upd.error.message); return; }
-    WPHO[i]=path; toast("📷 사진 인증 완료"); renderWList();
+    WPHO[i]=path; toast("사진 인증 완료"); renderWList();
   };
   inp.click();
 };
@@ -934,7 +970,7 @@ async function updateLeadBadge(){
 }
 function leadBeep(){ try{ const a=new (window.AudioContext||window.webkitAudioContext)(); const o=a.createOscillator(),g=a.createGain(); o.connect(g); g.connect(a.destination); o.frequency.value=880; g.gain.value=.15; o.start(); o.stop(a.currentTime+.2); }catch(e){} }
 function notifyLead(row){
-  toast("📥 새 견적 문의: "+esc((row&&row.company)||""));
+  toast("새 견적 문의 · "+esc((row&&row.company)||""));
   leadBeep();
   try{ if(window.Notification && Notification.permission==="granted") new Notification("클린 오피스 — 새 견적 문의",{body:((row&&row.company)||"")+" · "+((row&&row.phone)||""),icon:"icon-192.png"}); }catch(e){}
 }
@@ -962,13 +998,13 @@ async function viewLeads(){
     const ph=String(l.phone||"").replace(/[^0-9+]/g,"");
     return `<div class="box" style="padding:14px 16px${isNew?';border:2px solid var(--blue)':''}">
       <div class="flex" style="justify-content:space-between">
-        <div><b style="font-size:15px">${esc(l.company)||'(무명)'}</b>${isNew?' <span class="chip">NEW</span>':''}
+        <div><b style="font-size:14px">${esc(l.company)||'(무명)'}</b>${isNew?' <span class="chip">NEW</span>':''}
           <div class="sub" style="margin:3px 0 0">${t} · 출처 ${esc(l.source)||'-'}${l.area_pyeong?` · ${esc(l.area_pyeong)}평`:''}${l.frequency?` · ${esc(l.frequency)}`:''}</div></div>
-        <a class="btn sm" style="text-decoration:none;flex-shrink:0" href="tel:${ph}">📞 ${esc(l.phone)}</a>
+        <a class="btn sm" style="text-decoration:none;flex-shrink:0" href="tel:${ph}"><i class="ti ti-phone" aria-hidden="true"></i> ${esc(l.phone)}</a>
       </div>
-      ${l.address?`<div style="font-size:13px;margin-top:8px">📍 ${esc(l.address)}</div>`:''}
-      ${l.clean_type?`<div style="font-size:12.5px;color:var(--mut);margin-top:4px">${esc(l.clean_type)}</div>`:''}
-      ${l.message?`<div style="font-size:13px;background:var(--panel2);border-radius:8px;padding:9px 11px;margin-top:8px">${esc(l.message)}</div>`:''}
+      ${l.address?`<div style="font-size:13px;margin-top:8px"><i class="ti ti-map-pin" aria-hidden="true"></i> ${esc(l.address)}</div>`:''}
+      ${l.clean_type?`<div style="font-size:13px;color:var(--mut);margin-top:4px">${esc(l.clean_type)}</div>`:''}
+      ${l.message?`<div style="font-size:13px;background:var(--panel2);border-radius:10px;padding:9px 11px;margin-top:8px">${esc(l.message)}</div>`:''}
     </div>`;}).join("");
   V.innerHTML=`<h1>문의함 (${(data||[]).length})</h1><div class="sub">견적 페이지(QR)로 들어온 문의 · 새 문의는 실시간 알림 · <b>5분 내 회신!</b></div>`+
     (rows||'<div class="box" style="color:var(--mut)">아직 문의가 없습니다. 전단지 QR로 들어오면 여기 쌓입니다.</div>');
