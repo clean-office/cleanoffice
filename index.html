@@ -104,6 +104,7 @@ tr:hover td{background:var(--panel2)}
       <a data-v="map"><i class="ti ti-map-pin"></i>지도</a>
       <a data-v="route"><i class="ti ti-route"></i>동선</a>
       <div class="grp">고객·정산</div>
+      <a data-v="leads"><i class="ti ti-inbox"></i>문의함<span id="leadBadge" style="display:none;margin-left:auto;background:#dc2626;color:#fff;font-size:11px;font-weight:800;border-radius:99px;padding:1px 7px"></span></a>
       <a data-v="clients"><i class="ti ti-file-check"></i>계약 호실</a>
       <a data-v="todo"><i class="ti ti-checklist"></i>할일</a>
     </div>
@@ -174,6 +175,7 @@ async function showApp(){
   if(MYROLE!=='owner'){ await showWorkerApp(); return; }   // 알바 = 일(동선) 관련만
   await loadData();
   document.querySelectorAll("#nav a").forEach(a=>a.onclick=()=>go(a.dataset.v));
+  initLeads();
   go("dash");
 }
 async function loadData(){
@@ -193,6 +195,7 @@ function go(view,arg){
   else if(view==="map")viewMap();
   else if(view==="route")viewRoute();
   else if(view==="detail")renderDetail(arg);
+  else if(view==="leads")viewLeads();
   else if(view==="clients")viewClients();
   else V.innerHTML='<h1>할일</h1><div class="sub">재방문(next_date) 알림 — 다음 단계에서 연결</div><div class="box">🚧 준비중</div>';
 }
@@ -916,6 +919,61 @@ window.wPhoto=(i)=>{
   };
   inp.click();
 };
+/* ===== 문의함(leads) — 사장 전용 ===== */
+const LSEEN="co_leads_seen";
+const esc=s=>String(s==null?"":s).replace(/[<>&"]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;",'"':"&quot;"}[c]));
+function leadSeenTs(){ return localStorage.getItem(LSEEN)||"1970-01-01"; }
+async function updateLeadBadge(){
+  try{
+    const {count,error}=await sb.from("leads").select("id",{count:"exact",head:true}).gt("created_at",leadSeenTs());
+    const b=$("leadBadge"); if(!b) return;
+    if(!error && count>0){ b.textContent=count>99?"99+":count; b.style.display="inline-block"; }
+    else b.style.display="none";
+  }catch(e){}
+}
+function leadBeep(){ try{ const a=new (window.AudioContext||window.webkitAudioContext)(); const o=a.createOscillator(),g=a.createGain(); o.connect(g); g.connect(a.destination); o.frequency.value=880; g.gain.value=.15; o.start(); o.stop(a.currentTime+.2); }catch(e){} }
+function notifyLead(row){
+  toast("📥 새 견적 문의: "+esc((row&&row.company)||""));
+  leadBeep();
+  try{ if(window.Notification && Notification.permission==="granted") new Notification("클린 오피스 — 새 견적 문의",{body:((row&&row.company)||"")+" · "+((row&&row.phone)||""),icon:"icon-192.png"}); }catch(e){}
+}
+let LEADSCH=null;
+function initLeads(){
+  if(MYROLE!=="owner") return;
+  updateLeadBadge();
+  try{
+    if(LEADSCH) return;
+    LEADSCH=sb.channel("leads-ch").on("postgres_changes",{event:"INSERT",schema:"public",table:"leads"},p=>{
+      notifyLead(p.new); updateLeadBadge();
+      const cur=document.querySelector('#nav a.on'); if(cur&&cur.dataset.v==="leads") viewLeads();
+    }).subscribe();
+  }catch(e){}
+}
+async function viewLeads(){
+  const V=$("view"); V.innerHTML='<h1>문의함</h1><div class="loading">불러오는 중…</div>';
+  try{ if(window.Notification && Notification.permission==="default") Notification.requestPermission(); }catch(e){}
+  const {data,error}=await sb.from("leads").select("*").order("created_at",{ascending:false}).limit(100);
+  if(error){ V.innerHTML='<h1>문의함</h1><div class="box">불러오기 오류: '+esc(error.message)+'</div>'; return; }
+  const seen=leadSeenTs();
+  const rows=(data||[]).map(l=>{
+    const isNew=l.created_at>seen;
+    const t=new Date(l.created_at).toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
+    const ph=String(l.phone||"").replace(/[^0-9+]/g,"");
+    return `<div class="box" style="padding:14px 16px${isNew?';border:2px solid var(--blue)':''}">
+      <div class="flex" style="justify-content:space-between">
+        <div><b style="font-size:15px">${esc(l.company)||'(무명)'}</b>${isNew?' <span class="chip">NEW</span>':''}
+          <div class="sub" style="margin:3px 0 0">${t} · 출처 ${esc(l.source)||'-'}${l.area_pyeong?` · ${esc(l.area_pyeong)}평`:''}${l.frequency?` · ${esc(l.frequency)}`:''}</div></div>
+        <a class="btn sm" style="text-decoration:none;flex-shrink:0" href="tel:${ph}">📞 ${esc(l.phone)}</a>
+      </div>
+      ${l.address?`<div style="font-size:13px;margin-top:8px">📍 ${esc(l.address)}</div>`:''}
+      ${l.clean_type?`<div style="font-size:12.5px;color:var(--mut);margin-top:4px">${esc(l.clean_type)}</div>`:''}
+      ${l.message?`<div style="font-size:13px;background:var(--panel2);border-radius:8px;padding:9px 11px;margin-top:8px">${esc(l.message)}</div>`:''}
+    </div>`;}).join("");
+  V.innerHTML=`<h1>문의함 (${(data||[]).length})</h1><div class="sub">견적 페이지(QR)로 들어온 문의 · 새 문의는 실시간 알림 · <b>5분 내 회신!</b></div>`+
+    (rows||'<div class="box" style="color:var(--mut)">아직 문의가 없습니다. 전단지 QR로 들어오면 여기 쌓입니다.</div>');
+  localStorage.setItem(LSEEN,new Date().toISOString()); updateLeadBadge();
+}
+
 window.addEventListener("online",()=>{ try{vqFlush()}catch(e){} });
 if("serviceWorker" in navigator){ try{ navigator.serviceWorker.register("sw.js"); }catch(e){} }
 
