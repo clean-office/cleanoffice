@@ -161,7 +161,7 @@ async function doSignup(){
   if(data.session){ showApp(); }   // 메일확인 꺼져있으면 바로 입장
   else { $("loginErr").style.color="var(--green)"; $("loginErr").textContent="가입 완료! 인증 메일이 오면 확인 후, 다시 로그인하면 됩니다."; }
 }
-async function doLogout(){ await sb.auth.signOut(); show("login") }
+async function doLogout(){ await sb.auth.signOut(); document.querySelector(".side").style.display=""; show("login") }
 
 let MYROLE='worker', MYEMAIL='';
 async function loadRole(){
@@ -173,6 +173,7 @@ async function showApp(){
   show("app");
   await loadRole();
   if(MYROLE!=='owner'){ await showWorkerApp(); return; }   // 알바 = 일(동선) 관련만
+  document.querySelector(".side").style.display="";        // (알바 화면이 숨겼을 수 있음) 사이드바 복구
   await loadData();
   document.querySelectorAll("#nav a").forEach(a=>a.onclick=()=>go(a.dataset.v));
   initLeads();
