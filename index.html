@@ -131,9 +131,12 @@ function initClient(){
 }
 async function boot(){
   if(!initClient())return;
+  sb.auth.onAuthStateChange((ev)=>{ if(ev==="SIGNED_OUT") show("login"); });   // 세션 만료 시 로그인 화면
   const {data}=await sb.auth.getSession();
   if(data && data.session){ showApp() } else { show("login") }
 }
+document.addEventListener("visibilitychange",()=>{ if(!document.hidden && sb){ try{ sb.auth.getSession(); if(typeof vqFlush==="function") vqFlush(); }catch(e){} } });   // 백그라운드 복귀 시 세션 갱신·큐 전송
+if(/KAKAOTALK/i.test(navigator.userAgent)){ try{ location.href="kakaotalk://web/openExternal?url="+encodeURIComponent(location.href); }catch(e){} }   // 카톡 인앱 → 기본 브라우저
 function saveKey(){
   const k=$("anonKey").value.trim();
   if(!(k.startsWith("sb_publishable_")||k.startsWith("eyJ"))){$("setupErr").textContent="키 형식 확인! 'sb_publishable_...' (또는 'eyJ...')로 시작하는 Publishable 키를 붙여넣어 주세요. Secret 키 아님!";return}
@@ -878,7 +881,18 @@ async function vqFlush(){
   } finally { VQBUSY=false; }
 }
 const VP_PUB="https://nivgbvkjuvujofadpcsx.supabase.co/storage/v1/object/public/visitpics/";
-function shrinkImg(file,max,q){ return new Promise(res=>{
+async function shrinkImg(file,max,q){
+  try{ // EXIF 회전 반영 + HEIC 대응 (지원 브라우저)
+    if(window.createImageBitmap){
+      const bmp=await createImageBitmap(file,{imageOrientation:"from-image"});
+      let w=bmp.width,h=bmp.height; const s=Math.min(1,max/Math.max(w,h)); w=Math.round(w*s); h=Math.round(h*s);
+      const cv=document.createElement("canvas"); cv.width=w; cv.height=h;
+      cv.getContext("2d").drawImage(bmp,0,0,w,h);
+      const b=await new Promise(r=>cv.toBlob(r,"image/jpeg",q));
+      if(b) return b;
+    }
+  }catch(e){}
+  return new Promise(res=>{
   const img=new Image(); img.onload=()=>{
     let w=img.width,h=img.height; const s=Math.min(1,max/Math.max(w,h)); w=Math.round(w*s); h=Math.round(h*s);
     const cv=document.createElement("canvas"); cv.width=w; cv.height=h;
@@ -894,7 +908,7 @@ window.wPhoto=(i)=>{
     toast("사진 올리는 중…");
     const blob=await shrinkImg(f,1280,0.72);
     const path=WCUR.id+"/"+i+"_"+Date.now()+".jpg";
-    const up=await sb.storage.from("visitpics").upload(path,blob,{contentType:"image/jpeg"});
+    const up=await sb.storage.from("visitpics").upload(path,blob,{contentType:(blob&&blob.type)||"image/jpeg"});
     if(up.error){ toast("업로드 실패: "+up.error.message); return; }
     const upd=await sb.from("visits").update({photo_path:path}).eq("id",WVID[i]);
     if(upd.error){ toast("저장 실패: "+upd.error.message); return; }
