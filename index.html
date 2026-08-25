@@ -578,7 +578,7 @@ function viewRoute(){
    </div>
    <div id="rresult"></div>
    <div id="rassign"></div>`;
-  loadAssignments();
+  loadAssignments(); loadWorkers();
 }
 function setRMeta(t){ if($("rmeta"))$("rmeta").textContent=t; }
 async function genRoute(){
@@ -624,9 +624,10 @@ function showRouteResult(){
      <div id="rlist"></div>
    </div>
    <div class="box" style="margin-top:12px"><h3>알바에게 배정</h3>
-     <div class="flex"><input id="aEmail" type="email" placeholder="알바 이메일 (가입 전이어도 OK)" style="flex:1;min-width:220px">
+     <div class="flex"><input id="aEmail" type="email" list="workerList" placeholder="알바 이메일" style="flex:1;min-width:220px">
+     <datalist id="workerList"></datalist>
      <button class="btn" onclick="assignRoute()">이 동선 배정</button></div>
-     <div class="sub" style="margin:8px 0 0">알바가 앱에서 이 이메일로 회원가입/로그인하면 <b>이 동선만</b> 보입니다. 진행 상황은 아래 '배정 현황'에서.</div></div>
+     <div class="sub" id="aHint" style="margin:8px 0 0">알바가 이 이메일로 회원가입하면 <b>이 동선만</b> 보입니다. 진행 상황은 아래 '배정 현황'에서.</div></div>
    <button class="btn ghost sm" onclick="go('route')"><i class="ti ti-arrow-left" aria-hidden="true"></i> 다시 만들기</button>`;
   rmap=null; rov=[]; rline=null;   // 매번 새 #rmap에 새 지도 (재생성 시 stale map 방지)
 }
@@ -640,11 +641,27 @@ window.assignRoute=async()=>{
   const today=new Date(); const dstr=(today.getMonth()+1)+"/"+today.getDate();
   const {error}=await sb.from("routes").insert({owner_id:owner,worker_email:email,title:`${z||"동선"} ${dstr} (${RROUTE.length}곳)`,zone:z,mode:RMODE,stops,status:"active"});
   if(error){ toast("배정 실패: "+error.message); return; }
-  toast("배정됨 → "+email); if($("aEmail"))$("aEmail").value="";
+  const known=(WORKERS||[]).some(w=>w.email===email);
+  toast(known? ("배정됨 → "+email) : ("배정됨 → "+email+" (아직 미가입)"));
+  if($("aEmail"))$("aEmail").value="";
   loadAssignments();
 };
+let WORKERS=[];
+async function loadWorkers(){
+  try{
+    const {data}=await sb.from("profiles").select("email,role").not("email","is",null);
+    WORKERS=(data||[]).filter(w=>w.role!=="owner");
+    const dl=$("workerList");
+    if(dl) dl.innerHTML=WORKERS.map(w=>`<option value="${esc(w.email)}">`).join("");
+    const hint=$("aHint");
+    if(hint) hint.innerHTML = WORKERS.length
+      ? `가입된 알바 <b>${WORKERS.length}명</b> — 칸을 누르면 목록에서 고를 수 있어요.`
+      : `<b style="color:var(--red)">아직 가입한 알바가 없습니다.</b> 알바에게 <b>clean-office.github.io/cleanoffice</b> 링크를 보내 회원가입시킨 뒤 그 이메일로 배정하세요.`;
+  }catch(e){}
+}
 async function loadAssignments(){
   const box=$("rassign"); if(!box) return;
+  if(!WORKERS.length) await loadWorkers();
   const {data:rs,error}=await sb.from("routes").select("id,title,zone,mode,worker_email,status,created_at,stops").order("created_at",{ascending:false}).limit(15);
   if(error){ box.innerHTML='<div class="box">배정 현황 오류: '+error.message+'</div>'; return; }
   if(!rs||!rs.length){ box.innerHTML='<div class="box" style="color:var(--mut)">아직 배정한 동선이 없습니다. 동선 생성 → 알바 이메일로 배정하면 여기에 진행 상황이 쌓입니다.</div>'; return; }
@@ -662,7 +679,7 @@ async function loadAssignments(){
       <div class="flex" style="justify-content:space-between">
         <div><b style="font-size:14px">${r.title||r.zone||'동선'}</b>
           <span class="badge" style="margin-left:6px">${r.mode||''}</span>
-          <div class="sub" style="margin:3px 0 0"><i class="ti ti-user" aria-hidden="true"></i> ${r.worker_email||'미지정'} · 마지막 체크 ${last}${(vok[r.id]||0)>0?` · <span style="color:var(--green)">현장확인 ${vok[r.id]}</span>`:''}</div></div>
+          <div class="sub" style="margin:3px 0 0"><i class="ti ti-user" aria-hidden="true"></i> ${r.worker_email||'미지정'}${(r.worker_email&&WORKERS.length&&!WORKERS.some(w=>w.email===r.worker_email))?' <span class="chip" style="background:#fdecec;color:#c02626">미가입</span>':''} · 마지막 체크 ${last}${(vok[r.id]||0)>0?` · <span style="color:var(--green)">현장확인 ${vok[r.id]}</span>`:''}</div></div>
         <div style="text-align:right;flex-shrink:0">
           <b style="font-size:16px;color:${cdone?'var(--green)':'var(--blue2)'}">${done}/${total}</b>
           <span class="del" style="margin-left:10px;font-size:13px" onclick="delRoute('${r.id}')">삭제</span></div>
