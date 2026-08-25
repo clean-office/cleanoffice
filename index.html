@@ -646,10 +646,12 @@ window.assignRoute=async()=>{
   if($("aEmail"))$("aEmail").value="";
   loadAssignments();
 };
-let WORKERS=[];
+let WORKERS=[], WORKERS_OK=false;
 async function loadWorkers(){
   try{
-    const {data}=await sb.from("profiles").select("email,role").not("email","is",null);
+    const {data,error}=await sb.from("profiles").select("email,role").not("email","is",null);
+    if(error) throw error;
+    WORKERS_OK=true;
     WORKERS=(data||[]).filter(w=>w.role!=="owner");
     const dl=$("workerList");
     if(dl) dl.innerHTML=WORKERS.map(w=>`<option value="${esc(w.email)}">`).join("");
@@ -661,7 +663,7 @@ async function loadWorkers(){
 }
 async function loadAssignments(){
   const box=$("rassign"); if(!box) return;
-  if(!WORKERS.length) await loadWorkers();
+  if(!WORKERS_OK) await loadWorkers();
   const {data:rs,error}=await sb.from("routes").select("id,title,zone,mode,worker_email,status,created_at,stops").order("created_at",{ascending:false}).limit(15);
   if(error){ box.innerHTML='<div class="box">배정 현황 오류: '+error.message+'</div>'; return; }
   if(!rs||!rs.length){ box.innerHTML='<div class="box" style="color:var(--mut)">아직 배정한 동선이 없습니다. 동선 생성 → 알바 이메일로 배정하면 여기에 진행 상황이 쌓입니다.</div>'; return; }
@@ -679,7 +681,7 @@ async function loadAssignments(){
       <div class="flex" style="justify-content:space-between">
         <div><b style="font-size:14px">${r.title||r.zone||'동선'}</b>
           <span class="badge" style="margin-left:6px">${r.mode||''}</span>
-          <div class="sub" style="margin:3px 0 0"><i class="ti ti-user" aria-hidden="true"></i> ${r.worker_email||'미지정'}${(r.worker_email&&WORKERS.length&&!WORKERS.some(w=>w.email===r.worker_email))?' <span class="chip" style="background:#fdecec;color:#c02626">미가입</span>':''} · 마지막 체크 ${last}${(vok[r.id]||0)>0?` · <span style="color:var(--green)">현장확인 ${vok[r.id]}</span>`:''}</div></div>
+          <div class="sub" style="margin:3px 0 0"><i class="ti ti-user" aria-hidden="true"></i> ${r.worker_email||'미지정'}${(r.worker_email&&WORKERS_OK&&!WORKERS.some(w=>w.email===r.worker_email))?' <span class="chip" style="background:#fdecec;color:#c02626">미가입 — 알바가 아직 회원가입 안 함</span>':''} · 마지막 체크 ${last}${(vok[r.id]||0)>0?` · <span style="color:var(--green)">현장확인 ${vok[r.id]}</span>`:''}</div></div>
         <div style="text-align:right;flex-shrink:0">
           <b style="font-size:16px;color:${cdone?'var(--green)':'var(--blue2)'}">${done}/${total}</b>
           <span class="del" style="margin-left:10px;font-size:13px" onclick="delRoute('${r.id}')">삭제</span></div>
